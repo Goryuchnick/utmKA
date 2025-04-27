@@ -181,7 +181,8 @@ const Sidebar = React.forwardRef<
       return (
         <div
           className={cn(
-            "flex h-full w-[--sidebar-width] flex-col bg-sidebar text-sidebar-foreground", // No radius needed here as it's part of the layout flow
+            "flex h-full w-[--sidebar-width] flex-col bg-sidebar text-sidebar-foreground",
+            side === 'left' ? 'border-r border-sidebar-border' : 'border-l border-sidebar-border', // Ensure border for non-collapsible
             className
           )}
           ref={ref}
@@ -246,7 +247,10 @@ const Sidebar = React.forwardRef<
             // Adjust width and padding based on state and variant
             variant === "floating" || variant === "inset"
               ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)] group-data-[state=expanded]:w-[var(--sidebar-width)]"
-              : "group-data-[collapsible=icon]:w-[--sidebar-width-icon] group-data-[state=expanded]:w-[var(--sidebar-width)] group-data-[side=left]:border-r group-data-[side=right]:border-l",
+              : cn(
+                "group-data-[collapsible=icon]:w-[--sidebar-width-icon] group-data-[state=expanded]:w-[var(--sidebar-width)]",
+                side === 'left' ? 'border-r border-sidebar-border' : 'border-l border-sidebar-border' // Apply border explicitly for sidebar variant
+                ),
              className
           )}
           {...props}
