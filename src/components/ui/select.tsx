@@ -11,12 +11,17 @@ const Select = SelectPrimitive.Root
 
 const SelectGroup = SelectPrimitive.Group
 
+// Updated SelectValue to better handle placeholders and default state
 const SelectValue = React.forwardRef<
     React.ElementRef<typeof SelectPrimitive.Value>,
     React.ComponentPropsWithoutRef<typeof SelectPrimitive.Value>
->(({ className, children, ...props }, ref) => (
-    // Allow children to override the default placeholder rendering logic
-    <SelectPrimitive.Value ref={ref} className={cn(className)} {...props}>
+>(({ className, placeholder, children, ...props }, ref) => (
+    <SelectPrimitive.Value
+        ref={ref}
+        className={cn("text-sm", className)}
+        placeholder={placeholder} // Pass placeholder prop
+        {...props}
+    >
         {children}
     </SelectPrimitive.Value>
 ));
@@ -36,7 +41,10 @@ const SelectTrigger = React.forwardRef<
     )}
     {...props}
   >
-    {children}
+    {/* Ensure children or a placeholder is rendered */}
+    <span className="truncate">
+      {children}
+    </span>
     <SelectPrimitive.Icon asChild>
       <ChevronDown className="h-4 w-4 opacity-50" />
     </SelectPrimitive.Icon>
@@ -127,7 +135,14 @@ SelectLabel.displayName = SelectPrimitive.Label.displayName
 const SelectItem = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Item>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item> & { value: string } // Ensure value is always a string
->(({ className, children, value, ...props }, ref) => ( // Accept value prop
+>(({ className, children, value, ...props }, ref) => { // Accept value prop
+   // Enforce non-empty string value for SelectItem as required by Radix UI
+   if (value === '') {
+      console.warn('A <Select.Item /> received an empty string value prop. Using a placeholder value "__placeholder__" instead. Ensure all items have unique, non-empty values.');
+      value = "__placeholder__"; // Use a placeholder value if an empty string is passed
+   }
+
+   return (
    <SelectPrimitive.Item
     ref={ref}
     value={value} // Pass value prop down
@@ -145,7 +160,8 @@ const SelectItem = React.forwardRef<
 
     <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
   </SelectPrimitive.Item>
-))
+   )
+})
 SelectItem.displayName = SelectPrimitive.Item.displayName
 
 const SelectSeparator = React.forwardRef<
@@ -172,3 +188,5 @@ export {
   SelectScrollUpButton,
   SelectScrollDownButton,
 }
+
+    

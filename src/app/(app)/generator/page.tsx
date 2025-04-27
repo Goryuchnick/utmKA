@@ -253,7 +253,7 @@ export default function GeneratorPage() {
 
   // Function to load template data into the form
   const handleTemplateSelect = (templateId: string) => {
-      if (!templateId) return; // Do nothing if placeholder is selected
+      if (!templateId || templateId === '__placeholder__') return; // Do nothing if placeholder is selected
 
       const selectedTemplate = templates.find(t => t.id === templateId);
       if (selectedTemplate) {
@@ -289,7 +289,7 @@ export default function GeneratorPage() {
    React.useEffect(() => {
         const subscription = watch((value, { name }) => {
             // Handle source sync
-            if (name === 'utm_source_preset' && value.utm_source_preset) {
+            if (name === 'utm_source_preset' && value.utm_source_preset && value.utm_source_preset !== '__placeholder__') {
                 setValue('utm_source_custom', value.utm_source_preset, { shouldValidate: true }); // Set and validate
             } else if (name === 'utm_source_custom' && value.utm_source_custom !== watch('utm_source_preset')) {
                 const presetValue = predefinedSources.find(p => p.value === value.utm_source_custom)?.value || '';
@@ -298,7 +298,7 @@ export default function GeneratorPage() {
             }
 
             // Handle medium sync
-            if (name === 'utm_medium_preset' && value.utm_medium_preset) {
+            if (name === 'utm_medium_preset' && value.utm_medium_preset && value.utm_medium_preset !== '__placeholder__') {
                 setValue('utm_medium_custom', value.utm_medium_preset, { shouldValidate: true }); // Set and validate
             } else if (name === 'utm_medium_custom' && value.utm_medium_custom !== watch('utm_medium_preset')) {
                 const presetValue = predefinedMediums.find(p => p.value === value.utm_medium_custom)?.value || '';
@@ -331,24 +331,28 @@ export default function GeneratorPage() {
                         name="template_select"
                         control={control}
                         render={({ field }) => (
-                          <Select onValueChange={handleTemplateSelect} value={field.value || ''}>
+                          <Select onValueChange={handleTemplateSelect} value={field.value || '__placeholder__'}>
                               <SelectTrigger id="template_select" className={cn(
                                   'rounded-md shadow-md bg-input text-primary font-medium',
-                                  !field.value && 'text-muted-foreground' // Show placeholder style if no value
+                                  !field.value || field.value === '__placeholder__' ? 'text-muted-foreground' : '' // Show placeholder style if no value or placeholder
                               )}>
-                                  <SelectValue>
-                                    {field.value ? (
-                                      templates.find(t => t.id === field.value)?.name
-                                    ) : (
+                                  <SelectValue placeholder={
                                       <span className="text-muted-foreground flex items-center">
                                           <BookMarked className="mr-2 h-4 w-4" /> Выберите шаблон для загрузки
                                       </span>
-                                    )}
+                                  }>
+                                      {field.value && field.value !== '__placeholder__' ? (
+                                          templates.find(t => t.id === field.value)?.name
+                                      ) : (
+                                          <span className="text-muted-foreground flex items-center">
+                                              <BookMarked className="mr-2 h-4 w-4" /> Выберите шаблон...
+                                          </span>
+                                      )}
                                   </SelectValue>
                               </SelectTrigger>
                               <SelectContent className="rounded-lg">
-                                  {/* Add a placeholder item */}
-                                  <SelectItem value="" disabled>
+                                  {/* Add a placeholder item with a non-empty value */}
+                                  <SelectItem value="__placeholder__" disabled>
                                       <span className="text-muted-foreground flex items-center">
                                           <BookMarked className="mr-2 h-4 w-4" /> Выберите шаблон...
                                       </span>
@@ -408,7 +412,7 @@ export default function GeneratorPage() {
                                 render={({ field }) => (
                                 <Select
                                     onValueChange={(value) => field.onChange(value || '')}
-                                    value={field.value || ''}
+                                    value={field.value || '__placeholder__'} // Use placeholder value
                                     disabled={!isAuthenticated} // Disable for guest users
                                 >
                                     <SelectTrigger
@@ -416,7 +420,7 @@ export default function GeneratorPage() {
                                         // Custom styling for the button look
                                         className={cn(
                                             "!h-10 !w-auto !border-none !border-l !border-input !shadow-none !ring-0 focus:!ring-0 rounded-none bg-muted text-primary font-medium px-3",
-                                            !field.value && 'text-muted-foreground',
+                                            (!field.value || field.value === '__placeholder__') && 'text-muted-foreground',
                                             !isAuthenticated && 'cursor-not-allowed opacity-50' // Style when disabled
                                         )}
                                         aria-label="Предустановленные источники" // Accessibility
@@ -426,7 +430,7 @@ export default function GeneratorPage() {
                                     </SelectTrigger>
                                     <SelectContent className="rounded-lg">
                                         {/* Add placeholder item */}
-                                         <SelectItem value="" disabled>Выберите источник</SelectItem>
+                                         <SelectItem value="__placeholder__" disabled>Выберите источник</SelectItem>
                                         {predefinedSources.map((source) => (
                                             <SelectItem key={source.value} value={source.value}>
                                             {source.label} ({source.value})
@@ -464,16 +468,16 @@ export default function GeneratorPage() {
                                     render={({ field }) => (
                                     <Select
                                         onValueChange={(value) => field.onChange(value || '')}
-                                        value={field.value || ''}
+                                        value={field.value || '__placeholder__'} // Use placeholder value
                                         disabled={!isAuthenticated} // Disable for guest users
                                         >
                                         <SelectTrigger id="utm_source_preset" className={cn(
                                             'rounded-md shadow-md bg-input text-primary font-medium',
-                                            !field.value && 'text-muted-foreground',
+                                            (!field.value || field.value === '__placeholder__') && 'text-muted-foreground',
                                              !isAuthenticated && 'cursor-not-allowed opacity-50' // Style when disabled
                                             )}>
-                                            <SelectValue>
-                                                {field.value
+                                            <SelectValue placeholder={<span className="text-muted-foreground">Выберите источник</span>}>
+                                                {field.value && field.value !== '__placeholder__'
                                                     ? predefinedSources.find(p => p.value === field.value)?.label || field.value
                                                     : <span className="text-muted-foreground">Выберите источник</span>
                                                 }
@@ -481,7 +485,7 @@ export default function GeneratorPage() {
                                         </SelectTrigger>
                                         <SelectContent className="rounded-lg">
                                              {/* Add placeholder item */}
-                                             <SelectItem value="" disabled>Выберите источник</SelectItem>
+                                             <SelectItem value="__placeholder__" disabled>Выберите источник</SelectItem>
                                             {predefinedSources.map((source) => (
                                                 <SelectItem key={source.value} value={source.value}>
                                                 {source.label} ({source.value})
@@ -531,14 +535,14 @@ export default function GeneratorPage() {
                                 render={({ field }) => (
                                 <Select
                                     onValueChange={(value) => field.onChange(value || '')}
-                                    value={field.value || ''}
+                                    value={field.value || '__placeholder__'} // Use placeholder value
                                      disabled={!isAuthenticated} // Disable for guest users
                                     >
                                      <SelectTrigger
                                         id="utm_medium_preset_mobile"
                                         className={cn(
                                             "!h-10 !w-auto !border-none !border-l !border-input !shadow-none !ring-0 focus:!ring-0 rounded-none bg-muted text-primary font-medium px-3",
-                                            !field.value && 'text-muted-foreground',
+                                            (!field.value || field.value === '__placeholder__') && 'text-muted-foreground',
                                             !isAuthenticated && 'cursor-not-allowed opacity-50'
                                         )}
                                         aria-label="Предустановленные каналы"
@@ -547,7 +551,7 @@ export default function GeneratorPage() {
                                     </SelectTrigger>
                                     <SelectContent className="rounded-lg">
                                          {/* Add placeholder item */}
-                                        <SelectItem value="" disabled>Выберите канал</SelectItem>
+                                        <SelectItem value="__placeholder__" disabled>Выберите канал</SelectItem>
                                         {predefinedMediums.map((medium) => (
                                             <SelectItem key={medium.value} value={medium.value}>
                                             {medium.label} ({medium.value})
@@ -585,16 +589,16 @@ export default function GeneratorPage() {
                                     render={({ field }) => (
                                     <Select
                                         onValueChange={(value) => field.onChange(value || '')}
-                                        value={field.value || ''}
+                                        value={field.value || '__placeholder__'} // Use placeholder value
                                          disabled={!isAuthenticated} // Disable for guest users
                                         >
                                         <SelectTrigger id="utm_medium_preset" className={cn(
                                             'rounded-md shadow-md bg-input text-primary font-medium',
-                                            !field.value && 'text-muted-foreground',
+                                            (!field.value || field.value === '__placeholder__') && 'text-muted-foreground',
                                              !isAuthenticated && 'cursor-not-allowed opacity-50'
                                             )}>
-                                            <SelectValue>
-                                                {field.value
+                                             <SelectValue placeholder={<span className="text-muted-foreground">Выберите канал</span>}>
+                                                {field.value && field.value !== '__placeholder__'
                                                     ? predefinedMediums.find(p => p.value === field.value)?.label || field.value
                                                     : <span className="text-muted-foreground">Выберите канал</span>
                                                 }
@@ -602,7 +606,7 @@ export default function GeneratorPage() {
                                         </SelectTrigger>
                                         <SelectContent className="rounded-lg">
                                              {/* Add placeholder item */}
-                                            <SelectItem value="" disabled>Выберите канал</SelectItem>
+                                            <SelectItem value="__placeholder__" disabled>Выберите канал</SelectItem>
                                             {predefinedMediums.map((medium) => (
                                                 <SelectItem key={medium.value} value={medium.value}>
                                                 {medium.label} ({medium.value})
@@ -730,3 +734,5 @@ export default function GeneratorPage() {
     </div>
   );
 }
+
+    
