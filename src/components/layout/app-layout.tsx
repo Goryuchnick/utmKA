@@ -4,39 +4,69 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { WandSparkles, LayoutGrid, LogIn, UserPlus, UserCog } from 'lucide-react'; // Added LogIn, UserPlus, UserCog
+import { WandSparkles, LayoutGrid, LogIn, UserPlus, UserCog, History, Settings, User, LogOut } from 'lucide-react'; // Added more icons
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import {
+  SidebarProvider,
+  Sidebar,
+  SidebarHeader,
+  SidebarContent,
+  SidebarFooter,
+  SidebarTrigger,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarInset,
+} from '@/components/ui/sidebar'; // Import sidebar components
 
 // Assuming a simple check for authentication status (replace with actual auth state)
 const useAuth = () => {
     // Replace with your actual authentication context or state management
     const [isAuthenticated, setIsAuthenticated] = React.useState(false); // Default to not logged in
+    const [isLoading, setIsLoading] = React.useState(true); // Add loading state
 
      // Example: Check localStorage or a cookie on mount (very basic)
      React.useEffect(() => {
-        // In a real app, you'd verify a token with a backend or use an auth provider SDK
-        const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
-        setIsAuthenticated(loggedIn);
+        try {
+             // In a real app, you'd verify a token with a backend or use an auth provider SDK
+            const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            setIsAuthenticated(loggedIn);
+        } catch (error) {
+            console.error("Error accessing localStorage:", error);
+             // Handle potential errors (e.g., localStorage disabled)
+            setIsAuthenticated(false);
+        } finally {
+            setIsLoading(false); // Set loading to false after checking
+        }
+
 
         // Add simple login/logout functions for testing
         (window as any).mockLogin = () => {
-            localStorage.setItem('isLoggedIn', 'true');
-            setIsAuthenticated(true);
-            window.location.reload(); // Reload to reflect changes in layout
+            try {
+                localStorage.setItem('isLoggedIn', 'true');
+                setIsAuthenticated(true);
+                window.location.reload(); // Reload to reflect changes in layout
+            } catch (error) {
+                console.error("Error setting localStorage:", error);
+            }
         };
         (window as any).mockLogout = () => {
-            localStorage.removeItem('isLoggedIn');
-            setIsAuthenticated(false);
-            window.location.reload();
+            try {
+                localStorage.removeItem('isLoggedIn');
+                setIsAuthenticated(false);
+                window.location.href = '/login'; // Redirect to login after logout
+            } catch (error) {
+                console.error("Error removing localStorage:", error);
+            }
         };
 
      }, []);
 
 
-    return { isAuthenticated };
+    return { isAuthenticated, isLoading };
 };
 
 
@@ -44,107 +74,157 @@ const publicNavItems = [
   { href: '/generator', label: 'Генератор', icon: WandSparkles },
 ];
 
+// Define admin navigation items separately
+const adminNavItems = [
+  { href: '/admin/history', label: 'История ссылок', icon: History },
+  { href: '/admin/templates', label: 'Шаблоны', icon: Settings },
+];
+const accountNavItem = { href: '/account', label: 'Аккаунт', icon: User }; // Placeholder for account page
+
+// Define auth navigation items for unauthenticated users
 const authNavItems = [
     { href: '/login', label: 'Войти', icon: LogIn },
     { href: '/register', label: 'Регистрация', icon: UserPlus },
 ];
 
-const adminNavItem = { href: '/admin/history', label: 'Админ панель', icon: UserCog };
-
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isMobile = useIsMobile();
-  const { isAuthenticated } = useAuth(); // Get auth status
+  const { isAuthenticated, isLoading } = useAuth(); // Get auth status and loading state
 
-  const navItems = isAuthenticated ? [...publicNavItems, adminNavItem] : [...publicNavItems];
-  const mobileNavItems = isAuthenticated ? [...publicNavItems, adminNavItem] : [...publicNavItems, ...authNavItems]; // Mobile shows auth buttons if not logged in
+  const handleLogout = () => {
+    // Use the mock logout function if available, otherwise log
+    if ((window as any).mockLogout) {
+        (window as any).mockLogout();
+    } else {
+        console.log('Logging out...');
+        // Fallback redirect
+        window.location.href = '/login';
+    }
+  };
+
+   // Display loading state or skeleton if auth status is not yet determined
+   if (isLoading) {
+        return <div className="flex min-h-screen items-center justify-center">Loading...</div>; // Or a proper skeleton loader
+    }
+
+
+  // Determine the title based on the current path
+    const getTitle = () => {
+        // Combine all possible nav items for title lookup
+        const allNavItems = [...publicNavItems, ...adminNavItems, accountNavItem, ...authNavItems];
+        const currentItem = allNavItems.find(item => pathname.startsWith(item.href)); // Use startsWith for nested routes
+
+        if (currentItem) {
+            return currentItem.label;
+        }
+        // Fallback titles for specific paths if needed
+        if (pathname === '/') return 'Главная'; // Example for root path
+        return 'utmKA'; // Default title
+    };
+
+   const currentPageTitle = getTitle();
 
   return (
-    <div className="flex flex-col min-h-screen bg-background">
-      {!isMobile && (
-        <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
-          <div className="container flex h-14 items-center">
-            <Link href="/generator" className="mr-6 flex items-center space-x-2">
-              <LayoutGrid className="h-6 w-6 text-primary" />
-              <span className="font-bold text-primary">utmKA</span>
-            </Link>
-            <nav className="flex items-center space-x-1 lg:space-x-2 flex-1">
-              {navItems.map((item) => (
-                <Button
-                  key={item.href}
-                  variant="ghost"
-                  asChild
-                  className={cn(
-                    'text-sm font-medium transition-colors hover:text-primary px-3 py-2 rounded-md', // Added padding and rounded
-                    pathname.startsWith(item.href) ? 'text-primary bg-accent' : 'text-muted-foreground' // Highlight active section
-                  )}
-                >
-                  <Link href={item.href}>{item.label}</Link>
-                </Button>
-              ))}
-            </nav>
-             {/* Auth buttons for desktop */}
-            <div className="flex items-center space-x-2">
-                 {!isAuthenticated ? (
-                     authNavItems.map((item) => (
-                        <Button
-                          key={item.href}
-                          variant={pathname === item.href ? "default" : "outline"} // Style based on active
-                          size="sm"
-                          asChild
-                          className="rounded-md shadow-sm hover:shadow transition-shadow"
-                        >
-                            <Link href={item.href}>
-                                <item.icon className="mr-2 h-4 w-4" />
-                                {item.label}
-                            </Link>
-                        </Button>
-                     ))
-                 ) : (
-                     // Optional: Show a logout button or user menu on desktop when logged in
-                     <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => (window as any).mockLogout()} // Use mock logout for testing
-                        className="rounded-md shadow-sm hover:shadow transition-shadow"
-                        >
-                        <LogOut className="mr-2 h-4 w-4" /> Выйти
-                    </Button>
-                 )}
-            </div>
-          </div>
-        </header>
-      )}
+    <SidebarProvider defaultOpen={!isMobile} >
+       <Sidebar collapsible="icon" variant="sidebar" side="left">
+           <SidebarHeader className="items-center gap-2 border-b p-3 group-data-[collapsible=icon]:justify-center">
+                <Link href="/generator" className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
+                    <LayoutGrid className="h-6 w-6 text-primary" />
+                    <span className="font-bold text-primary">utmKA</span>
+                 </Link>
+                <SidebarTrigger className="ml-auto group-data-[collapsible=icon]:ml-0" />
+           </SidebarHeader>
+           <SidebarContent className="flex-1 overflow-y-auto p-2">
+                <SidebarMenu>
+                    {/* Public Items */}
+                    {publicNavItems.map((item) => (
+                        <SidebarMenuItem key={item.href}>
+                             <SidebarMenuButton
+                                asChild
+                                isActive={pathname.startsWith(item.href)} // Use startsWith
+                                tooltip={{ children: item.label}}
+                             >
+                                <Link href={item.href}>
+                                     <item.icon />
+                                     <span>{item.label}</span>
+                                </Link>
+                             </SidebarMenuButton>
+                        </SidebarMenuItem>
+                    ))}
 
-      <main className="flex-1">{children}</main>
+                     {/* Admin Items (conditionally rendered) */}
+                     {isAuthenticated && adminNavItems.map((item) => (
+                        <SidebarMenuItem key={item.href}>
+                             <SidebarMenuButton
+                                asChild
+                                isActive={pathname.startsWith(item.href)} // Use startsWith
+                                tooltip={{ children: item.label}}
+                             >
+                                <Link href={item.href}>
+                                     <item.icon />
+                                     <span>{item.label}</span>
+                                </Link>
+                             </SidebarMenuButton>
+                        </SidebarMenuItem>
+                    ))}
+                </SidebarMenu>
+           </SidebarContent>
+           <SidebarFooter className="border-t p-2">
+                <SidebarMenu>
+                     {/* Auth Links (Unauthenticated) */}
+                    {!isAuthenticated && authNavItems.map((item) => (
+                         <SidebarMenuItem key={item.href}>
+                            <SidebarMenuButton
+                                asChild
+                                isActive={pathname.startsWith(item.href)}
+                                tooltip={{ children: item.label}}
+                            >
+                                <Link href={item.href}>
+                                    <item.icon />
+                                    <span>{item.label}</span>
+                                </Link>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                    ))}
 
-      {isMobile && (
-        <footer className="sticky bottom-0 z-50 w-full border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-inner">
-          <nav className="container flex h-16 items-center justify-around">
-            {mobileNavItems.map((item) => (
-              <Link key={item.href} href={item.href} legacyBehavior>
-                <a className={cn(
-                  "flex flex-col items-center justify-center p-2 rounded-md transition-all duration-300 ease-in-out transform hover:scale-105", // Added animation
-                  pathname.startsWith(item.href) ? 'text-primary scale-110 font-semibold' : 'text-muted-foreground hover:text-primary/80' // Animation for active state
-                )}>
-                  <item.icon className="h-5 w-5 mb-1" />
-                  <span className="text-xs font-medium">{item.label}</span>
-                </a>
-              </Link>
-            ))}
-             {/* Logout button on mobile if authenticated */}
-            {isAuthenticated && (
-                 <button onClick={() => (window as any).mockLogout()} className={cn( // Use mock logout
-                  "flex flex-col items-center justify-center p-2 rounded-md transition-all duration-300 ease-in-out transform hover:scale-105 text-muted-foreground hover:text-destructive"
-                )}>
-                    <LogOut className="h-5 w-5 mb-1" />
-                    <span className="text-xs font-medium">Выйти</span>
-                 </button>
-            )}
-          </nav>
-        </footer>
-      )}
-    </div>
+                    {/* Account Link & Logout (Authenticated) */}
+                    {isAuthenticated && (
+                        <>
+                            <SidebarMenuItem>
+                                <SidebarMenuButton
+                                    asChild
+                                    isActive={pathname === accountNavItem.href}
+                                    tooltip={{ children: accountNavItem.label}}
+                                >
+                                     <Link href={accountNavItem.href}>
+                                        <accountNavItem.icon />
+                                        <span>{accountNavItem.label}</span>
+                                     </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                            <SidebarMenuItem>
+                                 <SidebarMenuButton onClick={handleLogout} tooltip={{ children: 'Выйти'}}>
+                                     <LogOut />
+                                     <span>Выйти</span>
+                                 </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        </>
+                    )}
+                </SidebarMenu>
+           </SidebarFooter>
+       </Sidebar>
+        <SidebarInset>
+             {/* Removed static header and footer */}
+            <main className="flex-1 container mx-auto p-4 md:p-8">
+                 {/* Dynamic Title */}
+                 <h1 className="text-3xl font-bold mb-6 text-primary">
+                     {currentPageTitle}
+                 </h1>
+                 {children}
+             </main>
+        </SidebarInset>
+    </SidebarProvider>
   );
 }

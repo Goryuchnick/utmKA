@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { Roboto_Mono } from 'next/font/google';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
-import AppLayout from '@/components/layout/app-layout';
+import AppLayout from '@/components/layout/app-layout'; // Import AppLayout
 
 const robotoMono = Roboto_Mono({
   weight: ['400'],
@@ -25,6 +25,7 @@ export default function RootLayout({
     <html lang="ru">
       {/* Updated className to use the new font variable */}
       <body className={`${robotoMono.variable} font-mono antialiased`}>
+         {/* Wrap children with AppLayout */}
         <AppLayout>{children}</AppLayout>
         <Toaster />
       </body>

@@ -114,6 +114,8 @@ export default function GeneratorPage() {
         url.search = ''; // Ensure no trailing '?' if no params
     }
     setGeneratedUrl(url.toString());
+     // TODO: Save the generated URL to history (likely requires API call/state management)
+     console.log('Saving to history:', url.toString()); // Placeholder
   };
 
   const copyToClipboard = () => {
@@ -127,9 +129,9 @@ export default function GeneratorPage() {
   };
 
   return (
-    <div className="container mx-auto p-4 md:p-8">
-      <h1 className="text-3xl font-bold mb-6 text-primary">Генератор UTM-меток</h1>
-      <Card className="mb-8 shadow-md rounded-lg">
+    <div className="space-y-8"> {/* Added space-y for spacing between elements */}
+      {/* The h1 title is removed from here and handled in AppLayout */}
+      <Card className="shadow-md rounded-lg">
         <CardContent className="p-6">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div>

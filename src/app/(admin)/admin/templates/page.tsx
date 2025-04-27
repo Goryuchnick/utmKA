@@ -94,6 +94,7 @@ export default function TemplatesPage() {
 
     return (
         <div className="space-y-6">
+             {/* The h1 title is removed from here and handled in AppLayout */}
             <div className="flex justify-end">
                 <Button onClick={openDialogForNew} className="rounded-md shadow-sm hover:shadow transition-shadow">
                     <PlusCircle className="mr-2 h-4 w-4" /> Добавить шаблон

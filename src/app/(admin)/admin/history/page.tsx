@@ -62,6 +62,7 @@ export default function AdminHistoryPage() {
 
   return (
       <div className="space-y-4">
+           {/* The h1 title is removed from here and handled in AppLayout */}
           {history.length === 0 ? (
               <p className="text-muted-foreground">История сгенерированных ссылок пуста.</p>
           ) : (
