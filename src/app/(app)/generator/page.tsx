@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import { CalendarIcon, Copy, BookMarked } from 'lucide-react'; // Added BookMarked icon
+import { CalendarIcon, Copy, BookMarked, XCircle } from 'lucide-react'; // Added BookMarked, XCircle icons
 import Link from 'next/link'; // Import Link
 
 import { Button } from '@/components/ui/button';
@@ -33,6 +33,7 @@ import { MonthPicker } from '@/components/ui/month-picker';
 import { useAuth } from '@/hooks/use-auth'; // Import useAuth
 import type { HistoryItem } from '@/types/history-item'; // Import shared type
 import { useIsMobile } from '@/hooks/use-mobile'; // Import useIsMobile hook
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'; // Import Tooltip components
 
 
 // Updated form schema: only baseUrl and utm_source are required
@@ -43,7 +44,7 @@ const formSchema = z.object({
   utm_medium_custom: z.string().optional(),
   utm_medium_preset: z.string().optional(),
   utm_campaign_name: z.string().optional(),
-  utm_campaign_date: z.date().optional(),
+  utm_campaign_date: z.date().optional().nullable(), // Allow null for clearing
   utm_term: z.string().optional(),
   utm_content: z.string().optional(),
   template_select: z.string().optional(), // Added dummy field for template selector control
@@ -111,6 +112,7 @@ export default function GeneratorPage() {
     handleSubmit,
     watch,
     setValue,
+    reset, // Add reset
     formState: { errors },
     trigger, // Add trigger for manual validation
   } = useForm<FormData>({
@@ -122,6 +124,7 @@ export default function GeneratorPage() {
       utm_medium_custom: '',
       utm_medium_preset: '',
       utm_campaign_name: '',
+      utm_campaign_date: null, // Initialize date as null
       utm_term: '',
       utm_content: '',
       template_select: '__placeholder__', // Initialize template select dummy field
@@ -215,8 +218,9 @@ export default function GeneratorPage() {
         // Ensure all dates in currentHistory are Date objects before proceeding
         const currentHistoryDates: HistoryItem[] = currentHistory.map(item => ({
           ...item,
-          date: typeof item.date === 'string' ? new Date(item.date) : item.date,
-        }));
+          // Handle potential invalid date strings during parsing
+          date: typeof item.date === 'string' ? new Date(item.date) : (item.date instanceof Date ? item.date : new Date()),
+        })).filter(item => !isNaN(item.date.getTime())); // Filter out invalid dates
 
 
         const newHistoryItem: HistoryItem = {
@@ -225,9 +229,12 @@ export default function GeneratorPage() {
             date: new Date(), // Store as Date object initially
         };
 
-        // Add new item and save back to localStorage
-        const updatedHistory = [newHistoryItem, ...currentHistoryDates]; // Add to the beginning
-        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updatedHistory.map(item => ({ ...item, date: item.date instanceof Date ? item.date.toISOString() : item.date })))); // Save dates as ISO strings
+        // Add new item and save back to localStorage, ensuring date is valid before stringifying
+        const updatedHistory = [newHistoryItem, ...currentHistoryDates];
+        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updatedHistory.map(item => ({
+            ...item,
+            date: item.date instanceof Date && !isNaN(item.date.getTime()) ? item.date.toISOString() : new Date().toISOString() // Fallback to now if date is invalid
+        }))));
 
         // If authenticated, you might also sync this with a backend database here
         // if (isAuthenticated) {
@@ -261,12 +268,23 @@ export default function GeneratorPage() {
 
       const selectedTemplate = templates.find(t => t.id === templateId);
       if (selectedTemplate) {
+          // Reset relevant fields before applying template
+          reset({
+              ...watch(), // Keep existing values for untouched fields like baseUrl
+              utm_source_custom: '',
+              utm_source_preset: '__placeholder__',
+              utm_medium_custom: '',
+              utm_medium_preset: '__placeholder__',
+              template_select: templateId, // Keep template selector value
+          });
+
+
           // Update source field
           if (selectedTemplate.utm_source) {
               setValue('utm_source_custom', selectedTemplate.utm_source, { shouldValidate: true });
               // Check if the template source exists in predefined values to update the select
-              const sourcePresetExists = predefinedSources.some(p => p.value === selectedTemplate.utm_source);
-              setValue('utm_source_preset', sourcePresetExists ? selectedTemplate.utm_source : '__placeholder__'); // Use placeholder if not found
+              const sourcePreset = predefinedSources.find(p => p.value === selectedTemplate.utm_source);
+              setValue('utm_source_preset', sourcePreset ? sourcePreset.value : '__placeholder__');
           } else {
               setValue('utm_source_custom', '', { shouldValidate: true });
               setValue('utm_source_preset', '__placeholder__');
@@ -276,8 +294,8 @@ export default function GeneratorPage() {
           if (selectedTemplate.utm_medium) {
               setValue('utm_medium_custom', selectedTemplate.utm_medium, { shouldValidate: true });
                // Check if the template medium exists in predefined values to update the select
-              const mediumPresetExists = predefinedMediums.some(p => p.value === selectedTemplate.utm_medium);
-              setValue('utm_medium_preset', mediumPresetExists ? selectedTemplate.utm_medium : '__placeholder__'); // Use placeholder if not found
+              const mediumPreset = predefinedMediums.find(p => p.value === selectedTemplate.utm_medium);
+              setValue('utm_medium_preset', mediumPreset ? mediumPreset.value : '__placeholder__');
           } else {
               setValue('utm_medium_custom', '', { shouldValidate: true });
               setValue('utm_medium_preset', '__placeholder__');
@@ -294,24 +312,24 @@ export default function GeneratorPage() {
   // Watch changes in preset fields to update custom fields
    React.useEffect(() => {
         const subscription = watch((value, { name }) => {
-            // Handle source sync
+             // Handle source sync
             if (name === 'utm_source_preset' && value.utm_source_preset && value.utm_source_preset !== '__placeholder__') {
                 setValue('utm_source_custom', value.utm_source_preset, { shouldValidate: true }); // Set and validate
-            } else if (name === 'utm_source_custom' && value.utm_source_custom !== watch('utm_source_preset')) {
-                 // Check if the custom value matches any predefined value
-                const presetValue = predefinedSources.find(p => p.value === value.utm_source_custom)?.value || '';
-                setValue('utm_source_preset', presetValue || '__placeholder__'); // Update select or set to placeholder
-                trigger('utm_source_custom'); // Validate custom field
+            } else if (name === 'utm_source_custom') {
+                // Check if the custom value matches any predefined value when custom input changes
+                const presetValue = predefinedSources.find(p => p.value === value.utm_source_custom)?.value;
+                setValue('utm_source_preset', presetValue || '__placeholder__', { shouldValidate: false }); // Update select or set to placeholder without validating select
+                trigger('utm_source_custom'); // Validate custom field itself
             }
 
             // Handle medium sync
             if (name === 'utm_medium_preset' && value.utm_medium_preset && value.utm_medium_preset !== '__placeholder__') {
                 setValue('utm_medium_custom', value.utm_medium_preset, { shouldValidate: true }); // Set and validate
-            } else if (name === 'utm_medium_custom' && value.utm_medium_custom !== watch('utm_medium_preset')) {
-                 // Check if the custom value matches any predefined value
-                const presetValue = predefinedMediums.find(p => p.value === value.utm_medium_custom)?.value || '';
-                setValue('utm_medium_preset', presetValue || '__placeholder__'); // Update select or set to placeholder
-                 trigger('utm_medium_custom'); // Validate if needed
+            } else if (name === 'utm_medium_custom') {
+                // Check if the custom value matches any predefined value when custom input changes
+                const presetValue = predefinedMediums.find(p => p.value === value.utm_medium_custom)?.value;
+                setValue('utm_medium_preset', presetValue || '__placeholder__', { shouldValidate: false }); // Update select or set to placeholder without validating select
+                trigger('utm_medium_custom'); // Validate custom field if needed
             }
         });
         return () => subscription.unsubscribe();
@@ -319,328 +337,376 @@ export default function GeneratorPage() {
 
     // Handler to close popover after selecting a date in MonthPicker
     const handleDateSelect = (date: Date | undefined, onChange: (...event: any[]) => void) => {
-        onChange(date);
+        onChange(date ?? null); // Ensure null is passed when cleared
         // Close popover regardless of whether a date was selected or cleared
         setIsDatePopoverOpen(false);
     };
 
 
+    // Component for Select trigger with tooltip
+    const SelectTriggerWithTooltip = ({
+        disabled,
+        children,
+        tooltipContent,
+        fieldValue, // Pass the field value to determine placeholder state
+        ...props
+    }: React.ComponentProps<typeof SelectTrigger> & { disabled: boolean; tooltipContent: string; fieldValue?: string | null }) => {
+        const trigger = (
+            <SelectTrigger
+                disabled={disabled}
+                {...props}
+                className={cn(
+                    "!h-10 !w-[170px] !border-none !border-l !border-input !shadow-none !ring-0 focus:!ring-0 rounded-none bg-muted px-3",
+                     // Use text-secondary for placeholder, primary for value
+                    (!fieldValue || fieldValue === '__placeholder__') ? 'text-secondary' : 'text-primary font-medium',
+                    disabled && 'cursor-not-allowed opacity-50'
+                )}
+            >
+                {children}
+            </SelectTrigger>
+        );
+
+        if (disabled) {
+            return (
+                <Tooltip>
+                    <TooltipTrigger asChild>{trigger}</TooltipTrigger>
+                    <TooltipContent className="rounded-md">
+                        <p>{tooltipContent}</p>
+                    </TooltipContent>
+                </Tooltip>
+            );
+        }
+
+        return trigger;
+    };
+
+
   return (
-    <div className="space-y-8">
-      {/* Card for Form Inputs */}
-      <Card className="bg-card shadow-lg rounded-lg"> {/* Use bg-card and rounded-lg */}
-        <CardContent className="p-6">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <TooltipProvider> {/* Wrap with TooltipProvider */}
+        <div className="space-y-8">
+        {/* Card for Form Inputs */}
+        <Card className="bg-card shadow-lg rounded-lg"> {/* Use bg-card and rounded-lg */}
+            <CardContent className="p-6">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
 
-             {/* Load Template Dropdown (Only shown if logged in and templates exist) */}
-             {isAuthenticated && templates.length > 0 && (
-                  <div>
-                      <Label htmlFor="template_select">Загрузить шаблон</Label>
-                      <Controller
-                        name="template_select"
-                        control={control}
-                        render={({ field }) => (
-                          <Select onValueChange={handleTemplateSelect} value={field.value || '__placeholder__'}>
-                              <SelectTrigger id="template_select" className={cn(
-                                  'rounded-md shadow-md bg-input text-primary font-medium',
-                                  !field.value || field.value === '__placeholder__' ? 'text-muted-foreground' : '' // Show placeholder style if no value or placeholder
-                              )}>
-                                  <SelectValue placeholder={
-                                      <span className="text-muted-foreground flex items-center">
-                                          <BookMarked className="mr-2 h-4 w-4" /> Выберите шаблон для загрузки
-                                      </span>
-                                  }>
-                                      {field.value && field.value !== '__placeholder__' ? (
-                                          templates.find(t => t.id === field.value)?.name
-                                      ) : (
-                                          <span className="text-muted-foreground flex items-center">
-                                              <BookMarked className="mr-2 h-4 w-4" /> Выберите шаблон...
-                                          </span>
-                                      )}
-                                  </SelectValue>
-                              </SelectTrigger>
-                              <SelectContent className="rounded-lg">
-                                  {/* Add a placeholder item with a non-empty value */}
-                                  <SelectItem value="__placeholder__" disabled>
-                                      <span className="text-muted-foreground flex items-center">
-                                          <BookMarked className="mr-2 h-4 w-4" /> Выберите шаблон...
-                                      </span>
-                                  </SelectItem>
-                                  {templates.map((template) => (
-                                      <SelectItem key={template.id} value={template.id}>
-                                          {template.name}
-                                      </SelectItem>
-                                  ))}
-                              </SelectContent>
-                          </Select>
-                        )}
-                      />
-                  </div>
-             )}
-
-            {/* Base URL */}
-            <div>
-              <Label htmlFor="baseUrl">URL сайта *</Label>
-              <Controller
-                name="baseUrl"
-                control={control}
-                render={({ field }) => (
-                  <Input id="baseUrl" placeholder="https://example.com/" {...field} className="rounded-md font-medium shadow-md"/>
-                )}
-              />
-              {errors.baseUrl && <p className="text-destructive text-sm mt-1">{errors.baseUrl.message}</p>}
-            </div>
-
-             {/* UTM Source - Merged Input + Select */}
-            <div>
-                <Label htmlFor="utm_source_custom">utm_source (Источник) *</Label>
-                <div className="flex items-center rounded-md border border-input shadow-md overflow-hidden bg-input">
-                    <Controller
-                        name="utm_source_custom"
-                        control={control}
-                        render={({ field }) => (
-                        <Input
-                            id="utm_source_custom"
-                            placeholder="Например: yandex"
-                            {...field}
-                            // Remove individual border/shadow, allow flex-grow
-                            className="flex-grow !border-none !shadow-none !ring-0 focus:!ring-0 rounded-none bg-transparent pl-3 font-medium"
-                            onChange={(e) => {
-                                field.onChange(e);
-                                trigger('utm_source_custom');
-                            }}
+                {/* Load Template Dropdown (Only shown if logged in and templates exist) */}
+                {isAuthenticated && templates.length > 0 && (
+                    <div>
+                        <Label htmlFor="template_select">Загрузить шаблон</Label>
+                        <Controller
+                            name="template_select"
+                            control={control}
+                            render={({ field }) => (
+                            <Select
+                                onValueChange={(value) => {
+                                    field.onChange(value); // Update the form state for the selector itself
+                                    handleTemplateSelect(value); // Call the function to load template data
+                                }}
+                                value={field.value || '__placeholder__'}
+                             >
+                                <SelectTrigger id="template_select" className={cn(
+                                    'rounded-md shadow-md bg-input text-primary font-medium',
+                                    // Show placeholder style if no value or placeholder selected
+                                    !field.value || field.value === '__placeholder__' ? 'text-secondary' : ''
+                                )}>
+                                    <SelectValue placeholder={
+                                        <span className="text-secondary flex items-center"> {/* Use text-secondary */}
+                                            <BookMarked className="mr-2 h-4 w-4" /> Выберите шаблон для загрузки
+                                        </span>
+                                    }>
+                                        {/* Render selected template name or placeholder */}
+                                        {field.value && field.value !== '__placeholder__' ? (
+                                            templates.find(t => t.id === field.value)?.name
+                                        ) : (
+                                            <span className="text-secondary flex items-center"> {/* Use text-secondary */}
+                                                <BookMarked className="mr-2 h-4 w-4" /> Выберите шаблон...
+                                            </span>
+                                        )}
+                                    </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent className="rounded-lg">
+                                    {/* Placeholder item */}
+                                    <SelectItem value="__placeholder__" disabled>
+                                        <span className="text-muted-foreground flex items-center">
+                                            <BookMarked className="mr-2 h-4 w-4" /> Выберите шаблон...
+                                        </span>
+                                    </SelectItem>
+                                    {/* Template items */}
+                                    {templates.map((template) => (
+                                        <SelectItem key={template.id} value={template.id}>
+                                            {template.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            )}
                         />
-                        )}
-                    />
-                    <Controller
-                        name="utm_source_preset"
-                        control={control}
-                        render={({ field }) => (
-                        <Select
-                            onValueChange={(value) => field.onChange(value === '__placeholder__' ? '' : value)} // Set to empty string if placeholder
-                            value={field.value || '__placeholder__'} // Use placeholder value
-                            disabled={!isAuthenticated} // Disable for guest users
-                        >
-                            <SelectTrigger
-                                id="utm_source_preset_merged"
-                                // Custom styling for the button look
-                                className={cn(
-                                    "!h-10 !w-[170px] !border-none !border-l !border-input !shadow-none !ring-0 focus:!ring-0 rounded-none bg-muted text-primary font-medium px-3", // Use text-primary, ensure full opacity
-                                    (!field.value || field.value === '__placeholder__') && 'text-muted-foreground',
-                                    !isAuthenticated && 'cursor-not-allowed opacity-50' // Style when disabled
-                                )}
-                                aria-label="Предустановленные источники" // Accessibility
-                            >
-                                    {/* Show value or placeholder */}
-                                <SelectValue placeholder={<span className="text-muted-foreground">Источник</span>}>
-                                    {field.value && field.value !== '__placeholder__'
-                                        ? predefinedSources.find(p => p.value === field.value)?.label || field.value
-                                        : <span className="text-muted-foreground">Источник</span> // Short placeholder
-                                    }
-                                </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent className="rounded-lg">
-                                {/* Add placeholder item */}
-                                    <SelectItem value="__placeholder__" disabled>Выберите источник</SelectItem>
-                                {isAuthenticated && predefinedSources.map((source) => ( // Conditionally render items
-                                    <SelectItem key={source.value} value={source.value}>
-                                    {source.label} ({source.value})
-                                    </SelectItem>
-                                ))}
-                                {!isAuthenticated && (
-                                    <SelectItem value="__no_auth__" disabled>
-                                        <span className="text-muted-foreground italic">Доступно после входа</span>
-                                    </SelectItem>
-                                )}
-                            </SelectContent>
-                        </Select>
-                        )}
-                    />
+                    </div>
+                )}
+
+
+                {/* Base URL */}
+                <div>
+                <Label htmlFor="baseUrl">URL сайта *</Label>
+                <Controller
+                    name="baseUrl"
+                    control={control}
+                    render={({ field }) => (
+                    <Input id="baseUrl" placeholder="https://example.com/" {...field} className="rounded-md font-medium shadow-md"/>
+                    )}
+                />
+                {errors.baseUrl && <p className="text-destructive text-sm mt-1">{errors.baseUrl.message}</p>}
                 </div>
-                {/* Display the refined error message here (applies to custom field input) */}
-                {errors.utm_source_custom && (
-                    <p className="text-destructive text-sm mt-1">{errors.utm_source_custom.message}</p>
-                )}
-            </div>
 
-
-           {/* UTM Medium - Merged Input + Select */}
-            <div>
-                <Label htmlFor="utm_medium_custom">utm_medium (Канал)</Label>
-                <div className="flex items-center rounded-md border border-input shadow-md overflow-hidden bg-input">
-                    <Controller
-                        name="utm_medium_custom"
-                        control={control}
-                        render={({ field }) => (
-                        <Input
-                            id="utm_medium_custom"
-                            placeholder="Например: cpc"
-                            {...field}
-                            className="flex-grow !border-none !shadow-none !ring-0 focus:!ring-0 rounded-none bg-transparent pl-3 font-medium"
-                            onChange={(e) => {
-                                field.onChange(e);
-                                trigger('utm_medium_custom');
-                            }}
+                {/* UTM Source - Merged Input + Select */}
+                <div>
+                    <Label htmlFor="utm_source_custom">utm_source (Источник) *</Label>
+                    <div className="flex items-center rounded-md border border-input shadow-md overflow-hidden bg-input">
+                        <Controller
+                            name="utm_source_custom"
+                            control={control}
+                            render={({ field }) => (
+                            <Input
+                                id="utm_source_custom"
+                                placeholder="Например: yandex"
+                                {...field}
+                                // Remove individual border/shadow, allow flex-grow
+                                className="flex-grow !border-none !shadow-none !ring-0 focus:!ring-0 rounded-none bg-transparent pl-3 font-medium"
+                                onChange={(e) => {
+                                    field.onChange(e);
+                                    trigger('utm_source_custom');
+                                }}
+                            />
+                            )}
                         />
-                        )}
-                    />
-                    <Controller
-                        name="utm_medium_preset"
-                        control={control}
-                        render={({ field }) => (
-                        <Select
-                            onValueChange={(value) => field.onChange(value === '__placeholder__' ? '' : value)} // Set to empty string if placeholder
-                            value={field.value || '__placeholder__'} // Use placeholder value
+                         <Controller
+                            name="utm_source_preset"
+                            control={control}
+                            render={({ field }) => (
+                                <Select
+                                    onValueChange={(value) => field.onChange(value === '__placeholder__' ? '' : value)}
+                                    value={field.value || '__placeholder__'}
+                                    disabled={!isAuthenticated}
+                                >
+                                     <SelectTriggerWithTooltip
+                                        id="utm_source_preset_merged"
+                                        disabled={!isAuthenticated}
+                                        tooltipContent="Войдите, чтобы использовать свои шаблоны"
+                                        aria-label="Предустановленные источники"
+                                        fieldValue={field.value} // Pass field value
+                                    >
+                                        <SelectValue placeholder={<span className="text-secondary">Источник</span>}>
+                                            {field.value && field.value !== '__placeholder__'
+                                                ? predefinedSources.find(p => p.value === field.value)?.label || field.value
+                                                : <span className="text-secondary">Источник</span>
+                                            }
+                                        </SelectValue>
+                                    </SelectTriggerWithTooltip>
+                                    <SelectContent className="rounded-lg">
+                                        <SelectItem value="__placeholder__" disabled>Выберите источник</SelectItem>
+                                        {isAuthenticated && predefinedSources.map((source) => (
+                                            <SelectItem key={source.value} value={source.value}>
+                                                {source.label} ({source.value})
+                                            </SelectItem>
+                                        ))}
+                                        {!isAuthenticated && (
+                                            <SelectItem value="__no_auth__" disabled>
+                                                <span className="text-muted-foreground italic">Доступно после входа</span>
+                                            </SelectItem>
+                                        )}
+                                    </SelectContent>
+                                </Select>
+                            )}
+                        />
+                    </div>
+                    {/* Display the refined error message here (applies to custom field input) */}
+                    {errors.utm_source_custom && (
+                        <p className="text-destructive text-sm mt-1">{errors.utm_source_custom.message}</p>
+                    )}
+                </div>
+
+
+            {/* UTM Medium - Merged Input + Select */}
+                <div>
+                    <Label htmlFor="utm_medium_custom">utm_medium (Канал)</Label>
+                    <div className="flex items-center rounded-md border border-input shadow-md overflow-hidden bg-input">
+                        <Controller
+                            name="utm_medium_custom"
+                            control={control}
+                            render={({ field }) => (
+                            <Input
+                                id="utm_medium_custom"
+                                placeholder="Например: cpc"
+                                {...field}
+                                className="flex-grow !border-none !shadow-none !ring-0 focus:!ring-0 rounded-none bg-transparent pl-3 font-medium"
+                                onChange={(e) => {
+                                    field.onChange(e);
+                                    trigger('utm_medium_custom');
+                                }}
+                            />
+                            )}
+                        />
+                        <Controller
+                            name="utm_medium_preset"
+                            control={control}
+                            render={({ field }) => (
+                            <Select
+                                onValueChange={(value) => field.onChange(value === '__placeholder__' ? '' : value)} // Set to empty string if placeholder
+                                value={field.value || '__placeholder__'} // Use placeholder value
                                 disabled={!isAuthenticated} // Disable for guest users
                             >
-                            <SelectTrigger
-                                id="utm_medium_preset_merged"
-                                className={cn(
-                                    "!h-10 !w-[170px] !border-none !border-l !border-input !shadow-none !ring-0 focus:!ring-0 rounded-none bg-muted text-primary font-medium px-3", // Use text-primary, ensure full opacity
-                                    (!field.value || field.value === '__placeholder__') && 'text-muted-foreground', // Keep placeholder muted
-                                    !isAuthenticated && 'cursor-not-allowed opacity-50'
-                                )}
-                                aria-label="Предустановленные каналы"
-                            >
-                                    {/* Show value or placeholder */}
-                                    <SelectValue placeholder={<span className="text-muted-foreground">Канал</span>}>
+                                <SelectTriggerWithTooltip
+                                    id="utm_medium_preset_merged"
+                                    disabled={!isAuthenticated}
+                                    tooltipContent="Войдите, чтобы использовать свои шаблоны"
+                                    aria-label="Предустановленные каналы"
+                                    fieldValue={field.value} // Pass field value
+                                >
+                                    <SelectValue placeholder={<span className="text-secondary">Канал</span>}>
                                         {field.value && field.value !== '__placeholder__'
                                             ? predefinedMediums.find(p => p.value === field.value)?.label || field.value
-                                            : <span className="text-muted-foreground">Канал</span> // Short placeholder
+                                            : <span className="text-secondary">Канал</span> // Short placeholder
                                         }
                                     </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent className="rounded-lg">
-                                    {/* Add placeholder item */}
-                                <SelectItem value="__placeholder__" disabled>Выберите канал</SelectItem>
-                                {isAuthenticated && predefinedMediums.map((medium) => ( // Conditionally render items
-                                    <SelectItem key={medium.value} value={medium.value}>
-                                    {medium.label} ({medium.value})
-                                    </SelectItem>
-                                ))}
-                                 {!isAuthenticated && (
-                                    <SelectItem value="__no_auth__" disabled>
-                                        <span className="text-muted-foreground italic">Доступно после входа</span>
-                                    </SelectItem>
-                                )}
-                            </SelectContent>
-                        </Select>
-                        )}
-                    />
-                </div>
-                 {errors.utm_medium_custom && <p className="text-destructive text-sm mt-1">{errors.utm_medium_custom.message}</p>}
-            </div>
-
-            {/* UTM Campaign - Merged Input + Date Button */}
-            <div>
-                <Label htmlFor="utm_campaign_name">utm_campaign (Название кампании)</Label>
-                <div className="flex items-center rounded-md border border-input shadow-md overflow-hidden bg-input">
-                    <Controller
-                        name="utm_campaign_name"
-                        control={control}
-                        render={({ field }) => (
-                        <Input
-                            id="utm_campaign_name"
-                            placeholder="Например: summer_sale"
-                            {...field}
-                            className="flex-grow !border-none !shadow-none !ring-0 focus:!ring-0 rounded-none bg-transparent pl-3 font-medium"
+                                </SelectTriggerWithTooltip>
+                                <SelectContent className="rounded-lg">
+                                        {/* Add placeholder item */}
+                                    <SelectItem value="__placeholder__" disabled>Выберите канал</SelectItem>
+                                    {isAuthenticated && predefinedMediums.map((medium) => ( // Conditionally render items
+                                        <SelectItem key={medium.value} value={medium.value}>
+                                        {medium.label} ({medium.value})
+                                        </SelectItem>
+                                    ))}
+                                    {!isAuthenticated && (
+                                        <SelectItem value="__no_auth__" disabled>
+                                            <span className="text-muted-foreground italic">Доступно после входа</span>
+                                        </SelectItem>
+                                    )}
+                                </SelectContent>
+                            </Select>
+                            )}
                         />
-                        )}
-                    />
-                    <Controller
-                        name="utm_campaign_date"
-                        control={control}
-                        render={({ field }) => (
-                        <Popover open={isDatePopoverOpen} onOpenChange={setIsDatePopoverOpen}>
-                            <PopoverTrigger asChild>
-                            <Button
-                                variant={'ghost'} // Use ghost variant for seamless look
-                                className={cn(
-                                    "!h-10 !w-[170px] !border-none !border-l !border-input !shadow-none !ring-0 focus:!ring-0 rounded-none bg-muted text-primary font-medium px-3 justify-between", // Use text-primary, ensure full opacity
-                                    !field.value && 'text-muted-foreground' // Muted placeholder text
-                                )}
-                                aria-label="Выберите дату кампании"
-                            >
-                                    {/* Show formatted date or placeholder */}
-                                    <span className="truncate">
-                                    {field.value ? format(field.value, 'LLLL yyyy', { locale: ru }) : <span className="text-muted-foreground">Дата</span>}
-                                </span>
-                                <CalendarIcon className={cn("h-4 w-4", field.value ? "text-primary" : "text-muted-foreground")} />
-                            </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0 rounded-lg shadow-lg" align="start">
-                                <MonthPicker
-                                selected={field.value}
-                                onSelect={(date) => handleDateSelect(date, field.onChange)}
-                                locale={ru}
-                                />
-                            </PopoverContent>
-                        </Popover>
-                        )}
-                    />
+                    </div>
+                    {errors.utm_medium_custom && <p className="text-destructive text-sm mt-1">{errors.utm_medium_custom.message}</p>}
                 </div>
-                {errors.utm_campaign_name && <p className="text-destructive text-sm mt-1">{errors.utm_campaign_name.message}</p>}
-                {errors.utm_campaign_date && <p className="text-destructive text-sm mt-1">{errors.utm_campaign_date.message}</p>}
-            </div>
 
 
-            {/* UTM Term */}
-             <div>
-              <Label htmlFor="utm_term">utm_term (Ключевое слово)</Label>
-               <Controller
-                  name="utm_term"
-                  control={control}
-                  render={({ field }) => (
-                    <Input id="utm_term" placeholder="Например: buy+book" {...field} className="rounded-md font-medium shadow-md" />
-                  )}
-                />
-                 {errors.utm_term && <p className="text-destructive text-sm mt-1">{errors.utm_term.message}</p>}
-            </div>
+                {/* UTM Campaign - Merged Input + Date Button */}
+                <div>
+                    <Label htmlFor="utm_campaign_name">utm_campaign (Название кампании)</Label>
+                    <div className="flex items-center rounded-md border border-input shadow-md overflow-hidden bg-input">
+                        <Controller
+                            name="utm_campaign_name"
+                            control={control}
+                            render={({ field }) => (
+                            <Input
+                                id="utm_campaign_name"
+                                placeholder="Например: summer_sale"
+                                {...field}
+                                className="flex-grow !border-none !shadow-none !ring-0 focus:!ring-0 rounded-none bg-transparent pl-3 font-medium"
+                            />
+                            )}
+                        />
+                        <Controller
+                            name="utm_campaign_date"
+                            control={control}
+                            render={({ field }) => (
+                            <Popover open={isDatePopoverOpen} onOpenChange={setIsDatePopoverOpen}>
+                                <PopoverTrigger asChild>
+                                <Button
+                                    variant={'ghost'} // Use ghost variant for seamless look
+                                    className={cn(
+                                        "!h-10 !w-[170px] !border-none !border-l !border-input !shadow-none !ring-0 focus:!ring-0 rounded-none bg-muted px-3 justify-between",
+                                        // Use text-secondary for placeholder, primary for value
+                                        !field.value ? 'text-secondary' : 'text-primary font-medium'
+                                    )}
+                                    aria-label="Выберите дату кампании"
+                                >
+                                        {/* Show formatted date or placeholder */}
+                                        <span className="truncate">
+                                        {field.value ? format(field.value, 'LLLL yyyy', { locale: ru }) : <span className="text-secondary">Дата</span>}
+                                    </span>
+                                    <CalendarIcon className={cn("h-4 w-4", field.value ? "text-primary" : "text-secondary")} />
+                                </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0 rounded-lg shadow-lg" align="start">
+                                    <MonthPicker
+                                    selected={field.value ?? undefined} // Pass undefined if null
+                                    onSelect={(date) => handleDateSelect(date, field.onChange)}
+                                    locale={ru}
+                                    onRemove={() => handleDateSelect(undefined, field.onChange)} // Add remove handler
+                                    onToday={() => handleDateSelect(new Date(), field.onChange)} // Add today handler
+                                    />
+                                </PopoverContent>
+                            </Popover>
+                            )}
+                        />
+                    </div>
+                    {errors.utm_campaign_name && <p className="text-destructive text-sm mt-1">{errors.utm_campaign_name.message}</p>}
+                    {errors.utm_campaign_date && <p className="text-destructive text-sm mt-1">{errors.utm_campaign_date.message}</p>}
+                </div>
 
-             {/* UTM Content */}
-            <div>
-              <Label htmlFor="utm_content">utm_content (Содержание)</Label>
-               <Controller
-                  name="utm_content"
-                  control={control}
-                  render={({ field }) => (
-                   <Input id="utm_content" placeholder="Например: banner_728x90" {...field} className="rounded-md font-medium shadow-md"/>
-                  )}
-                />
-                 {errors.utm_content && <p className="text-destructive text-sm mt-1">{errors.utm_content.message}</p>}
-            </div>
 
-            <Button type="submit" className="w-full md:w-auto rounded-md shadow-md hover:shadow-lg transition-shadow">Сгенерировать</Button>
-          </form>
-        </CardContent>
-      </Card>
+                {/* UTM Term */}
+                <div>
+                <Label htmlFor="utm_term">utm_term (Ключевое слово)</Label>
+                <Controller
+                    name="utm_term"
+                    control={control}
+                    render={({ field }) => (
+                        <Input id="utm_term" placeholder="Например: buy+book" {...field} className="rounded-md font-medium shadow-md" />
+                    )}
+                    />
+                    {errors.utm_term && <p className="text-destructive text-sm mt-1">{errors.utm_term.message}</p>}
+                </div>
 
-       {/* Card for Generated URL Output (conditionally rendered) */}
-      {generatedUrl && (
-        <Card className="bg-card shadow-lg rounded-lg"> {/* Use bg-card and rounded-lg */}
-          <CardHeader>
-            <CardTitle className="text-xl font-semibold text-primary">Сгенерированная ссылка</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col md:flex-row items-start md:items-center gap-4 break-all p-6">
-             {/* Make the URL text selectable */}
-             <p className="flex-1 text-primary bg-muted p-3 rounded-md shadow-inner select-all">{generatedUrl}</p>
-             <Button variant="default" size="sm" onClick={copyToClipboard} className="rounded-md shadow-md hover:shadow-lg transition-shadow">
-                <Copy className="mr-2 h-4 w-4" />
-                Копировать
-             </Button>
-          </CardContent>
+                {/* UTM Content */}
+                <div>
+                <Label htmlFor="utm_content">utm_content (Содержание)</Label>
+                <Controller
+                    name="utm_content"
+                    control={control}
+                    render={({ field }) => (
+                    <Input id="utm_content" placeholder="Например: banner_728x90" {...field} className="rounded-md font-medium shadow-md"/>
+                    )}
+                    />
+                    {errors.utm_content && <p className="text-destructive text-sm mt-1">{errors.utm_content.message}</p>}
+                </div>
+
+                <Button type="submit" className="w-full md:w-auto rounded-md shadow-md hover:shadow-lg transition-shadow">Сгенерировать</Button>
+            </form>
+            </CardContent>
         </Card>
-      )}
 
-       {/* Conditional Login Prompt */}
-        {!isLoading && !isAuthenticated && (
-             <p className="text-sm text-secondary text-center mt-4"> {/* Changed text-muted-foreground to text-secondary */}
-                 Чтобы смотреть историю создания размеченных ссылок,{' '}
-                 <Link href="/login" className="font-bold text-primary hover:underline">
-                     войдите в аккаунт →
-                 </Link>
-             </p>
-         )}
-    </div>
+        {/* Card for Generated URL Output (conditionally rendered) */}
+        {generatedUrl && (
+            <Card className="bg-card shadow-lg rounded-lg"> {/* Use bg-card and rounded-lg */}
+            <CardHeader>
+                <CardTitle className="text-xl font-semibold text-primary">Сгенерированная ссылка</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col md:flex-row items-start md:items-center gap-4 break-all p-6">
+                {/* Make the URL text selectable */}
+                <p className="flex-1 text-primary bg-muted p-3 rounded-md shadow-inner select-all">{generatedUrl}</p>
+                <Button variant="default" size="sm" onClick={copyToClipboard} className="rounded-md shadow-md hover:shadow-lg transition-shadow">
+                    <Copy className="mr-2 h-4 w-4" />
+                    Копировать
+                </Button>
+            </CardContent>
+            </Card>
+        )}
+
+        {/* Conditional Login Prompt */}
+            {!isLoading && !isAuthenticated && (
+                <p className="text-sm text-secondary text-center mt-4"> {/* Changed text-muted-foreground to text-secondary */}
+                    Чтобы смотреть историю создания размеченных ссылок,{' '}
+                    <Link href="/login" className="font-bold text-primary hover:underline">
+                        войдите в аккаунт →
+                    </Link>
+                </p>
+            )}
+        </div>
+    </TooltipProvider>
   );
 }
+
+    
