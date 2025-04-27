@@ -260,6 +260,7 @@ export default function GeneratorPage() {
           // Update source field
           if (selectedTemplate.utm_source) {
               setValue('utm_source_custom', selectedTemplate.utm_source, { shouldValidate: true });
+              // Check if the template source exists in predefined values to update the select
               const sourcePresetExists = predefinedSources.some(p => p.value === selectedTemplate.utm_source);
               setValue('utm_source_preset', sourcePresetExists ? selectedTemplate.utm_source : '');
           } else {
@@ -270,6 +271,7 @@ export default function GeneratorPage() {
           // Update medium field
           if (selectedTemplate.utm_medium) {
               setValue('utm_medium_custom', selectedTemplate.utm_medium, { shouldValidate: true });
+               // Check if the template medium exists in predefined values to update the select
               const mediumPresetExists = predefinedMediums.some(p => p.value === selectedTemplate.utm_medium);
               setValue('utm_medium_preset', mediumPresetExists ? selectedTemplate.utm_medium : '');
           } else {
@@ -292,17 +294,19 @@ export default function GeneratorPage() {
             if (name === 'utm_source_preset' && value.utm_source_preset && value.utm_source_preset !== '__placeholder__') {
                 setValue('utm_source_custom', value.utm_source_preset, { shouldValidate: true }); // Set and validate
             } else if (name === 'utm_source_custom' && value.utm_source_custom !== watch('utm_source_preset')) {
+                 // Check if the custom value matches any predefined value
                 const presetValue = predefinedSources.find(p => p.value === value.utm_source_custom)?.value || '';
-                setValue('utm_source_preset', presetValue || ''); // Ensure value is string
-                trigger('utm_source_custom');
+                setValue('utm_source_preset', presetValue || ''); // Update select or set to placeholder
+                trigger('utm_source_custom'); // Validate custom field
             }
 
             // Handle medium sync
             if (name === 'utm_medium_preset' && value.utm_medium_preset && value.utm_medium_preset !== '__placeholder__') {
                 setValue('utm_medium_custom', value.utm_medium_preset, { shouldValidate: true }); // Set and validate
             } else if (name === 'utm_medium_custom' && value.utm_medium_custom !== watch('utm_medium_preset')) {
+                 // Check if the custom value matches any predefined value
                 const presetValue = predefinedMediums.find(p => p.value === value.utm_medium_custom)?.value || '';
-                setValue('utm_medium_preset', presetValue || ''); // Ensure value is string
+                setValue('utm_medium_preset', presetValue || ''); // Update select or set to placeholder
                  trigger('utm_medium_custom'); // Validate if needed
             }
         });
@@ -319,7 +323,7 @@ export default function GeneratorPage() {
   return (
     <div className="space-y-8">
       {/* Card for Form Inputs */}
-      <Card className="bg-card"> {/* Use bg-card */}
+      <Card className="bg-card border-none"> {/* Use bg-card and remove border */}
         <CardContent className="p-6">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
 
@@ -411,7 +415,7 @@ export default function GeneratorPage() {
                                 control={control}
                                 render={({ field }) => (
                                 <Select
-                                    onValueChange={(value) => field.onChange(value || '')}
+                                    onValueChange={(value) => field.onChange(value === '__placeholder__' ? '' : value)} // Set to empty string if placeholder
                                     value={field.value || '__placeholder__'} // Use placeholder value
                                     disabled={!isAuthenticated} // Disable for guest users
                                 >
@@ -467,7 +471,7 @@ export default function GeneratorPage() {
                                     control={control}
                                     render={({ field }) => (
                                     <Select
-                                        onValueChange={(value) => field.onChange(value || '')}
+                                        onValueChange={(value) => field.onChange(value === '__placeholder__' ? '' : value)} // Set to empty string if placeholder
                                         value={field.value || '__placeholder__'} // Use placeholder value
                                         disabled={!isAuthenticated} // Disable for guest users
                                         >
@@ -534,7 +538,7 @@ export default function GeneratorPage() {
                                 control={control}
                                 render={({ field }) => (
                                 <Select
-                                    onValueChange={(value) => field.onChange(value || '')}
+                                    onValueChange={(value) => field.onChange(value === '__placeholder__' ? '' : value)} // Set to empty string if placeholder
                                     value={field.value || '__placeholder__'} // Use placeholder value
                                      disabled={!isAuthenticated} // Disable for guest users
                                     >
@@ -588,7 +592,7 @@ export default function GeneratorPage() {
                                     control={control}
                                     render={({ field }) => (
                                     <Select
-                                        onValueChange={(value) => field.onChange(value || '')}
+                                        onValueChange={(value) => field.onChange(value === '__placeholder__' ? '' : value)} // Set to empty string if placeholder
                                         value={field.value || '__placeholder__'} // Use placeholder value
                                          disabled={!isAuthenticated} // Disable for guest users
                                         >
@@ -623,33 +627,83 @@ export default function GeneratorPage() {
                  {errors.utm_medium_custom && <p className="text-destructive text-sm mt-1">{errors.utm_medium_custom.message}</p>}
             </div>
 
-            {/* UTM Campaign */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* UTM Campaign - Conditional Layout */}
+            <div className={cn("grid gap-4", isMobile ? "grid-cols-1" : "grid-cols-2")}>
               <div>
                 <Label htmlFor="utm_campaign_name">utm_campaign (Название кампании)</Label>
-                <Controller
-                  name="utm_campaign_name"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      id="utm_campaign_name"
-                      placeholder="Например: summer_sale"
-                      {...field}
-                      className="rounded-md font-medium shadow-md"
-                    />
-                  )}
-                />
-                 {errors.utm_campaign_name && <p className="text-destructive text-sm mt-1">{errors.utm_campaign_name.message}</p>}
+                 {/* Mobile: Merged Input + Date Button */}
+                 {isMobile ? (
+                      <div className="flex items-center rounded-md border border-input shadow-md overflow-hidden bg-input">
+                         <Controller
+                            name="utm_campaign_name"
+                            control={control}
+                            render={({ field }) => (
+                            <Input
+                                id="utm_campaign_name"
+                                placeholder="Например: summer_sale"
+                                {...field}
+                                className="flex-grow !border-none !shadow-none !ring-0 focus:!ring-0 rounded-none bg-transparent pl-3 font-medium"
+                            />
+                            )}
+                        />
+                        <Controller
+                            name="utm_campaign_date"
+                            control={control}
+                            render={({ field }) => (
+                            <Popover open={isDatePopoverOpen} onOpenChange={setIsDatePopoverOpen}>
+                                <PopoverTrigger asChild>
+                                <Button
+                                    variant={'ghost'} // Use ghost variant for seamless look
+                                    className={cn(
+                                    '!h-10 !w-auto !border-none !border-l !border-input !shadow-none !ring-0 focus:!ring-0 rounded-none bg-muted text-primary font-medium px-3', // Style like the select trigger
+                                    !field.value && 'text-muted-foreground' // Muted placeholder text
+                                    )}
+                                    aria-label="Выберите дату кампании"
+                                >
+                                    <CalendarIcon className={cn("h-4 w-4", field.value ? "text-primary" : "text-muted-foreground")} />
+                                </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0 rounded-lg shadow-lg" align="start">
+                                    <MonthPicker
+                                    selected={field.value}
+                                    onSelect={(date) => handleDateSelect(date, field.onChange)}
+                                    locale={ru}
+                                    />
+                                </PopoverContent>
+                            </Popover>
+                            )}
+                        />
+                      </div>
+                 ) : (
+                 // Desktop: Separate Input and Date Button
+                 <>
+                    <Controller
+                        name="utm_campaign_name"
+                        control={control}
+                        render={({ field }) => (
+                            <Input
+                            id="utm_campaign_name"
+                            placeholder="Например: summer_sale"
+                            {...field}
+                            className="rounded-md font-medium shadow-md"
+                            />
+                        )}
+                        />
+                    {errors.utm_campaign_name && <p className="text-destructive text-sm mt-1">{errors.utm_campaign_name.message}</p>}
+                 </>
+                 )}
               </div>
-               <div>
-                <Label htmlFor="utm_campaign_date">Дата кампании (Месяц, Год)</Label>
-                 <Controller
-                    name="utm_campaign_date"
-                    control={control}
-                    render={({ field }) => (
-                       <Popover open={isDatePopoverOpen} onOpenChange={setIsDatePopoverOpen}>
-                        <PopoverTrigger asChild>
-                           <Button
+               {/* Desktop only: Separate Date Field */}
+               {!isMobile && (
+                 <div>
+                    <Label htmlFor="utm_campaign_date">Дата кампании (Месяц, Год)</Label>
+                    <Controller
+                        name="utm_campaign_date"
+                        control={control}
+                        render={({ field }) => (
+                        <Popover open={isDatePopoverOpen} onOpenChange={setIsDatePopoverOpen}>
+                            <PopoverTrigger asChild>
+                            <Button
                                 variant={'outline'}
                                 className={cn(
                                 'w-full justify-start text-left font-normal rounded-md shadow-md bg-input text-primary font-medium', // Applied bg-input and text-primary
@@ -659,20 +713,24 @@ export default function GeneratorPage() {
                                 <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
                                 {field.value ? format(field.value, 'LLLL yyyy', { locale: ru }) : <span className="text-muted-foreground">Выберите дату</span>}
                             </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0 rounded-lg shadow-lg" align="start">
-                            <MonthPicker
-                              selected={field.value}
-                              onSelect={(date) => handleDateSelect(date, field.onChange)}
-                              locale={ru}
-                            />
-                        </PopoverContent>
-                      </Popover>
-                    )}
-                  />
-                   {errors.utm_campaign_date && <p className="text-destructive text-sm mt-1">{errors.utm_campaign_date.message}</p>}
-              </div>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0 rounded-lg shadow-lg" align="start">
+                                <MonthPicker
+                                selected={field.value}
+                                onSelect={(date) => handleDateSelect(date, field.onChange)}
+                                locale={ru}
+                                />
+                            </PopoverContent>
+                        </Popover>
+                        )}
+                    />
+                    {errors.utm_campaign_date && <p className="text-destructive text-sm mt-1">{errors.utm_campaign_date.message}</p>}
+                </div>
+               )}
             </div>
+            {/* Mobile only: Show errors for date picker */}
+            {isMobile && errors.utm_campaign_date && <p className="text-destructive text-sm mt-1">{errors.utm_campaign_date.message}</p>}
+
 
             {/* UTM Term */}
              <div>
@@ -707,7 +765,7 @@ export default function GeneratorPage() {
 
        {/* Card for Generated URL Output (conditionally rendered) */}
       {generatedUrl && (
-        <Card className="bg-card"> {/* Use bg-card */}
+        <Card className="bg-card border-none"> {/* Use bg-card and remove border */}
           <CardHeader>
             <CardTitle className="text-xl font-semibold text-primary">Сгенерированная ссылка</CardTitle>
           </CardHeader>
@@ -734,5 +792,3 @@ export default function GeneratorPage() {
     </div>
   );
 }
-
-    
