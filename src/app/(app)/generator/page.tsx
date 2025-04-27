@@ -185,7 +185,7 @@ export default function GeneratorPage() {
             campaignValue = `${campaignName}_${datePart}`;
         } else {
             // Only date provided
-            campaignValue = datePart;
+            campaignValue = datePart; // Use only the date part as the value
         }
     } else if (campaignName) {
         // Only name provided
@@ -423,14 +423,19 @@ export default function GeneratorPage() {
                                         id="utm_source_preset_mobile"
                                         // Custom styling for the button look
                                         className={cn(
-                                            "!h-10 !w-auto !border-none !border-l !border-input !shadow-none !ring-0 focus:!ring-0 rounded-none bg-muted text-primary font-medium px-3",
+                                            "!h-10 !w-[170px] !border-none !border-l !border-input !shadow-none !ring-0 focus:!ring-0 rounded-none bg-muted text-primary font-medium px-3", // Set fixed width, primary text color
                                             (!field.value || field.value === '__placeholder__') && 'text-muted-foreground',
                                             !isAuthenticated && 'cursor-not-allowed opacity-50' // Style when disabled
                                         )}
                                         aria-label="Предустановленные источники" // Accessibility
                                     >
-                                         {/* Only show dropdown icon */}
-                                        <SelectValue placeholder="" />
+                                         {/* Show value or placeholder */}
+                                        <SelectValue placeholder={<span className="text-muted-foreground">Выберите источник</span>}>
+                                            {field.value && field.value !== '__placeholder__'
+                                                ? predefinedSources.find(p => p.value === field.value)?.label || field.value
+                                                : <span className="text-muted-foreground">Источник</span> // Short placeholder
+                                            }
+                                        </SelectValue>
                                     </SelectTrigger>
                                     <SelectContent className="rounded-lg">
                                         {/* Add placeholder item */}
@@ -545,13 +550,19 @@ export default function GeneratorPage() {
                                      <SelectTrigger
                                         id="utm_medium_preset_mobile"
                                         className={cn(
-                                            "!h-10 !w-auto !border-none !border-l !border-input !shadow-none !ring-0 focus:!ring-0 rounded-none bg-muted text-primary font-medium px-3",
+                                            "!h-10 !w-[170px] !border-none !border-l !border-input !shadow-none !ring-0 focus:!ring-0 rounded-none bg-muted text-primary font-medium px-3", // Set fixed width, primary text color
                                             (!field.value || field.value === '__placeholder__') && 'text-muted-foreground',
                                             !isAuthenticated && 'cursor-not-allowed opacity-50'
                                         )}
                                         aria-label="Предустановленные каналы"
                                     >
-                                         <SelectValue placeholder="" />
+                                         {/* Show value or placeholder */}
+                                         <SelectValue placeholder={<span className="text-muted-foreground">Выберите канал</span>}>
+                                             {field.value && field.value !== '__placeholder__'
+                                                 ? predefinedMediums.find(p => p.value === field.value)?.label || field.value
+                                                 : <span className="text-muted-foreground">Канал</span> // Short placeholder
+                                             }
+                                         </SelectValue>
                                     </SelectTrigger>
                                     <SelectContent className="rounded-lg">
                                          {/* Add placeholder item */}
@@ -628,108 +639,109 @@ export default function GeneratorPage() {
             </div>
 
             {/* UTM Campaign - Conditional Layout */}
-            <div className={cn("grid gap-4", isMobile ? "grid-cols-1" : "grid-cols-2")}>
-              <div>
+            <div>
                 <Label htmlFor="utm_campaign_name">utm_campaign (Название кампании)</Label>
-                 {/* Mobile: Merged Input + Date Button */}
-                 {isMobile ? (
-                      <div className="flex items-center rounded-md border border-input shadow-md overflow-hidden bg-input">
-                         <Controller
+                 <div className={cn("grid gap-4", isMobile ? "grid-cols-1" : "grid-cols-2")}>
+                    {/* Mobile: Merged Input + Date Button */}
+                     {isMobile ? (
+                          <div className="flex items-center rounded-md border border-input shadow-md overflow-hidden bg-input">
+                             <Controller
+                                name="utm_campaign_name"
+                                control={control}
+                                render={({ field }) => (
+                                <Input
+                                    id="utm_campaign_name"
+                                    placeholder="Например: summer_sale"
+                                    {...field}
+                                    className="flex-grow !border-none !shadow-none !ring-0 focus:!ring-0 rounded-none bg-transparent pl-3 font-medium"
+                                />
+                                )}
+                            />
+                            <Controller
+                                name="utm_campaign_date"
+                                control={control}
+                                render={({ field }) => (
+                                <Popover open={isDatePopoverOpen} onOpenChange={setIsDatePopoverOpen}>
+                                    <PopoverTrigger asChild>
+                                    <Button
+                                        variant={'ghost'} // Use ghost variant for seamless look
+                                        className={cn(
+                                            "!h-10 !w-[170px] !border-none !border-l !border-input !shadow-none !ring-0 focus:!ring-0 rounded-none bg-muted text-primary font-medium px-3 justify-between", // Set fixed width, primary text color, space between text/icon
+                                            !field.value && 'text-muted-foreground' // Muted placeholder text
+                                        )}
+                                        aria-label="Выберите дату кампании"
+                                    >
+                                         {/* Show formatted date or placeholder */}
+                                         <span className="truncate">
+                                            {field.value ? format(field.value, 'LLLL yyyy', { locale: ru }) : <span className="text-muted-foreground">Дата</span>}
+                                        </span>
+                                        <CalendarIcon className={cn("h-4 w-4", field.value ? "text-primary" : "text-muted-foreground")} />
+                                    </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0 rounded-lg shadow-lg" align="start">
+                                        <MonthPicker
+                                        selected={field.value}
+                                        onSelect={(date) => handleDateSelect(date, field.onChange)}
+                                        locale={ru}
+                                        />
+                                    </PopoverContent>
+                                </Popover>
+                                )}
+                            />
+                          </div>
+                     ) : (
+                     // Desktop: Separate Input and Date Button
+                     <>
+                        <Controller
                             name="utm_campaign_name"
                             control={control}
                             render={({ field }) => (
-                            <Input
+                                <Input
                                 id="utm_campaign_name"
                                 placeholder="Например: summer_sale"
                                 {...field}
-                                className="flex-grow !border-none !shadow-none !ring-0 focus:!ring-0 rounded-none bg-transparent pl-3 font-medium"
-                            />
-                            )}
-                        />
-                        <Controller
-                            name="utm_campaign_date"
-                            control={control}
-                            render={({ field }) => (
-                            <Popover open={isDatePopoverOpen} onOpenChange={setIsDatePopoverOpen}>
-                                <PopoverTrigger asChild>
-                                <Button
-                                    variant={'ghost'} // Use ghost variant for seamless look
-                                    className={cn(
-                                    '!h-10 !w-auto !border-none !border-l !border-input !shadow-none !ring-0 focus:!ring-0 rounded-none bg-muted text-primary font-medium px-3', // Style like the select trigger
-                                    !field.value && 'text-muted-foreground' // Muted placeholder text
-                                    )}
-                                    aria-label="Выберите дату кампании"
-                                >
-                                    <CalendarIcon className={cn("h-4 w-4", field.value ? "text-primary" : "text-muted-foreground")} />
-                                </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0 rounded-lg shadow-lg" align="start">
-                                    <MonthPicker
-                                    selected={field.value}
-                                    onSelect={(date) => handleDateSelect(date, field.onChange)}
-                                    locale={ru}
-                                    />
-                                </PopoverContent>
-                            </Popover>
-                            )}
-                        />
-                      </div>
-                 ) : (
-                 // Desktop: Separate Input and Date Button
-                 <>
-                    <Controller
-                        name="utm_campaign_name"
-                        control={control}
-                        render={({ field }) => (
-                            <Input
-                            id="utm_campaign_name"
-                            placeholder="Например: summer_sale"
-                            {...field}
-                            className="rounded-md font-medium shadow-md"
-                            />
-                        )}
-                        />
-                    {errors.utm_campaign_name && <p className="text-destructive text-sm mt-1">{errors.utm_campaign_name.message}</p>}
-                 </>
-                 )}
-              </div>
-               {/* Desktop only: Separate Date Field */}
-               {!isMobile && (
-                 <div>
-                    <Label htmlFor="utm_campaign_date">Дата кампании (Месяц, Год)</Label>
-                    <Controller
-                        name="utm_campaign_date"
-                        control={control}
-                        render={({ field }) => (
-                        <Popover open={isDatePopoverOpen} onOpenChange={setIsDatePopoverOpen}>
-                            <PopoverTrigger asChild>
-                            <Button
-                                variant={'outline'}
-                                className={cn(
-                                'w-full justify-start text-left font-normal rounded-md shadow-md bg-input text-primary font-medium', // Applied bg-input and text-primary
-                                !field.value && 'text-muted-foreground' // Keep muted foreground for placeholder
-                                )}
-                            >
-                                <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-                                {field.value ? format(field.value, 'LLLL yyyy', { locale: ru }) : <span className="text-muted-foreground">Выберите дату</span>}
-                            </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0 rounded-lg shadow-lg" align="start">
-                                <MonthPicker
-                                selected={field.value}
-                                onSelect={(date) => handleDateSelect(date, field.onChange)}
-                                locale={ru}
+                                className="rounded-md font-medium shadow-md"
                                 />
-                            </PopoverContent>
-                        </Popover>
-                        )}
-                    />
-                    {errors.utm_campaign_date && <p className="text-destructive text-sm mt-1">{errors.utm_campaign_date.message}</p>}
+                            )}
+                            />
+                        {errors.utm_campaign_name && <p className="text-destructive text-sm mt-1">{errors.utm_campaign_name.message}</p>}
+                        <div>
+                            <Label htmlFor="utm_campaign_date">Дата кампании (Месяц, Год)</Label>
+                            <Controller
+                                name="utm_campaign_date"
+                                control={control}
+                                render={({ field }) => (
+                                <Popover open={isDatePopoverOpen} onOpenChange={setIsDatePopoverOpen}>
+                                    <PopoverTrigger asChild>
+                                    <Button
+                                        variant={'outline'}
+                                        className={cn(
+                                        'w-full justify-start text-left font-normal rounded-md shadow-md bg-input text-primary font-medium', // Applied bg-input and text-primary
+                                        !field.value && 'text-muted-foreground' // Keep muted foreground for placeholder
+                                        )}
+                                    >
+                                        <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                                        {field.value ? format(field.value, 'LLLL yyyy', { locale: ru }) : <span className="text-muted-foreground">Выберите дату</span>}
+                                    </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0 rounded-lg shadow-lg" align="start">
+                                        <MonthPicker
+                                        selected={field.value}
+                                        onSelect={(date) => handleDateSelect(date, field.onChange)}
+                                        locale={ru}
+                                        />
+                                    </PopoverContent>
+                                </Popover>
+                                )}
+                            />
+                            {errors.utm_campaign_date && <p className="text-destructive text-sm mt-1">{errors.utm_campaign_date.message}</p>}
+                        </div>
+                     </>
+                    )}
                 </div>
-               )}
+                {/* Mobile only: Show errors for date picker */}
+                {isMobile && errors.utm_campaign_date && <p className="text-destructive text-sm mt-1">{errors.utm_campaign_date.message}</p>}
             </div>
-            {/* Mobile only: Show errors for date picker */}
-            {isMobile && errors.utm_campaign_date && <p className="text-destructive text-sm mt-1">{errors.utm_campaign_date.message}</p>}
 
 
             {/* UTM Term */}
@@ -792,3 +804,4 @@ export default function GeneratorPage() {
     </div>
   );
 }
+
