@@ -31,6 +31,7 @@ import { cn } from '@/lib/utils';
 import { translateMonth } from '@/services/date-formatter';
 import { MonthPicker } from '@/components/ui/month-picker';
 import { useAuth } from '@/hooks/use-auth'; // Import useAuth
+import type { HistoryItem } from '@/types/history-item'; // Import shared type
 
 // Updated form schema: only baseUrl and utm_source are required
 const formSchema = z.object({
@@ -81,6 +82,8 @@ const predefinedMediums = [
   { label: 'Email', value: 'email' },
   { label: 'Social', value: 'social' },
 ];
+
+const HISTORY_STORAGE_KEY = 'utmka_history';
 
 export default function GeneratorPage() {
   const { toast } = useToast();
@@ -195,10 +198,36 @@ export default function GeneratorPage() {
     } else {
         url.search = ''; // Ensure no trailing '?' if no params
     }
-    setGeneratedUrl(url.toString());
-    // TODO: Save the generated URL to history (likely requires API call/state management linked to user ID)
+
+    const finalUrl = url.toString();
+    setGeneratedUrl(finalUrl);
+
+    // Save the generated URL to history if authenticated
     if (isAuthenticated) {
-        console.log('Saving to history for logged-in user:', url.toString()); // Placeholder
+        try {
+            const currentHistoryString = localStorage.getItem(HISTORY_STORAGE_KEY);
+            const currentHistory: HistoryItem[] = currentHistoryString ? JSON.parse(currentHistoryString) : [];
+
+            const newHistoryItem: HistoryItem = {
+                id: Date.now().toString(), // Simple unique ID
+                url: finalUrl,
+                date: new Date().toISOString(), // Store date as ISO string
+            };
+
+            // Add new item and save back to localStorage
+            const updatedHistory = [newHistoryItem, ...currentHistory]; // Add to the beginning
+            localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updatedHistory));
+
+             console.log('Saving to history for logged-in user:', finalUrl); // Placeholder
+
+        } catch (error) {
+             console.error("Error saving history to localStorage:", error);
+             toast({
+                 title: "Ошибка",
+                 description: "Не удалось сохранить ссылку в историю.",
+                 variant: "destructive",
+             });
+        }
     }
   };
 
@@ -295,25 +324,31 @@ export default function GeneratorPage() {
              {isAuthenticated && templates.length > 0 && (
                   <div>
                       <Label htmlFor="template_select">Загрузить шаблон</Label>
-                      <Select onValueChange={handleTemplateSelect}>
-                           <SelectTrigger id="template_select" className={cn(
-                                'rounded-md shadow-md bg-input text-primary font-medium',
-                                'text-muted-foreground' // Always show placeholder style initially
-                            )}>
-                                <SelectValue>
-                                     <span className="text-muted-foreground flex items-center">
-                                         <BookMarked className="mr-2 h-4 w-4" /> Выберите шаблон для загрузки
-                                     </span>
-                                 </SelectValue>
-                           </SelectTrigger>
-                           <SelectContent className="rounded-lg">
-                                {templates.map((template) => (
-                                    <SelectItem key={template.id} value={template.id}>
-                                        {template.name}
-                                    </SelectItem>
-                                ))}
-                           </SelectContent>
-                      </Select>
+                      <Controller
+                        name="template_select" // Add a dummy name for react-hook-form Controller if needed, or manage select state separately
+                        control={control} // This won't directly update form data, but allows control
+                        render={({ field }) => ( // field might not be directly used here
+                          <Select onValueChange={handleTemplateSelect} value={''}> {/* Reset value after select if needed */}
+                              <SelectTrigger id="template_select" className={cn(
+                                  'rounded-md shadow-md bg-input text-primary font-medium',
+                                  'text-muted-foreground' // Always show placeholder style initially
+                              )}>
+                                  <SelectValue>
+                                      <span className="text-muted-foreground flex items-center">
+                                          <BookMarked className="mr-2 h-4 w-4" /> Выберите шаблон для загрузки
+                                      </span>
+                                  </SelectValue>
+                              </SelectTrigger>
+                              <SelectContent className="rounded-lg">
+                                  {templates.map((template) => (
+                                      <SelectItem key={template.id} value={template.id}>
+                                          {template.name}
+                                      </SelectItem>
+                                  ))}
+                              </SelectContent>
+                          </Select>
+                        )}
+                      />
                   </div>
              )}
 
@@ -564,3 +599,4 @@ export default function GeneratorPage() {
     </div>
   );
 }
+

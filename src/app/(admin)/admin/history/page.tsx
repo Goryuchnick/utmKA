@@ -20,26 +20,36 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import type { HistoryItem } from '@/types/history-item'; // Import shared type
 
+const HISTORY_STORAGE_KEY = 'utmka_history';
 
-// Mock data for demonstration. Replace with actual data fetching based on logged-in user.
-const mockHistory = [
-  { id: '1', url: 'https://example.com/?utm_source=google&utm_medium=cpc&utm_campaign=summer_sale_july_2024', date: new Date(2024, 6, 15) },
-  { id: '2', url: 'https://example.com/?utm_source=yandex&utm_medium=cpm&utm_campaign=new_collection_august_2024', date: new Date(2024, 7, 1) },
-  { id: '3', url: 'https://example.com/?utm_source=alpinabook&utm_medium=email&utm_campaign=promo_september_2024', date: new Date(2024, 8, 10) },
-];
-
-// Interface for history items
-interface HistoryItem {
-    id: string;
-    url: string;
-    date: Date;
-}
 
 export default function AdminHistoryPage() {
   const { toast } = useToast();
-  // TODO: Replace mockHistory with state management and data fetching for the logged-in user
-  const [history, setHistory] = React.useState<HistoryItem[]>(mockHistory);
+  const [history, setHistory] = React.useState<HistoryItem[]>([]);
+
+  // Load history from localStorage on mount
+  React.useEffect(() => {
+    try {
+      const storedHistoryString = localStorage.getItem(HISTORY_STORAGE_KEY);
+      if (storedHistoryString) {
+        const parsedHistory: HistoryItem[] = JSON.parse(storedHistoryString);
+        // Ensure dates are Date objects (or handle as strings if preferred)
+        setHistory(parsedHistory.map(item => ({
+          ...item,
+          date: new Date(item.date) // Convert ISO string back to Date
+        })));
+      }
+    } catch (error) {
+      console.error("Error loading history from localStorage:", error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить историю.",
+        variant: "destructive",
+      });
+    }
+  }, [toast]); // Added toast to dependency array
 
   const copyToClipboard = (url: string) => {
     navigator.clipboard.writeText(url);
@@ -50,14 +60,23 @@ export default function AdminHistoryPage() {
   };
 
   const deleteLink = (id: string) => {
-      // TODO: Implement actual delete logic (API call, update state)
-      console.log(`Deleting link with id: ${id}`);
-      setHistory(prevHistory => prevHistory.filter(item => item.id !== id));
-      toast({
-        title: 'Удалено!',
-        description: 'Ссылка удалена из истории.',
-        variant: 'destructive', // Use destructive variant for delete confirmation
-      });
+      try {
+          const updatedHistory = history.filter(item => item.id !== id);
+          localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updatedHistory.map(item => ({...item, date: item.date.toISOString()})))); // Save back with ISO dates
+          setHistory(updatedHistory);
+          toast({
+            title: 'Удалено!',
+            description: 'Ссылка удалена из истории.',
+            variant: 'destructive', // Use destructive variant for delete confirmation
+          });
+      } catch (error) {
+           console.error("Error deleting history item from localStorage:", error);
+           toast({
+               title: "Ошибка",
+               description: "Не удалось удалить ссылку из истории.",
+               variant: "destructive",
+           });
+      }
   }
 
   return (
@@ -122,3 +141,4 @@ export default function AdminHistoryPage() {
       </div>
   );
 }
+
