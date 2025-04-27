@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Removed CardDescription
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -106,10 +106,10 @@ export default function TemplatesPage() {
             ) : (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {templates.map((template) => (
-                        <Card key={template.id} className="shadow-sm rounded-lg"> {/* Use rounded-lg */}
+                        <Card key={template.id} className="shadow-sm rounded-lg bg-card"> {/* Use bg-card */}
                             <CardHeader>
                                 <CardTitle className="text-lg font-semibold">{template.name}</CardTitle>
-                                {/* <CardDescription>Краткое описание шаблона</CardDescription> */}
+                                {/* CardDescription removed */}
                             </CardHeader>
                             <CardContent className="text-sm space-y-1">
                                 {template.utm_source && <p><strong>Источник:</strong> {template.utm_source}</p>}
@@ -118,7 +118,7 @@ export default function TemplatesPage() {
                                 {template.utm_term && <p><strong>Ключ. слово:</strong> {template.utm_term}</p>}
                                 {template.utm_content && <p><strong>Содержание:</strong> {template.utm_content}</p>}
                             </CardContent>
-                            <div className="flex justify-end gap-2 p-4 border-t">
+                            <div className="flex justify-end gap-2 p-4 border-t border-border"> {/* Use border-border */}
                                 <Button variant="outline" size="icon" onClick={() => openDialogForEdit(template)} className="h-8 w-8 rounded-md shadow-sm hover:shadow">
                                     <Edit className="h-4 w-4" />
                                     <span className="sr-only">Редактировать</span>

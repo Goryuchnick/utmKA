@@ -18,8 +18,9 @@
     --secondary-foreground: 0 0% 100%; /* White for contrast on secondary */
     --muted: 0 32% 95%; /* Lighter shade of primary */
     /* --muted-foreground: 0 32% 40%; /* Darker muted */
-    /* --muted-foreground: 0 32% 80%; /* Lighter muted foreground for placeholders #e8c7c5 */
-    --muted-foreground: 0 10% 75%; /* Adjusted placeholder color #C7C2C2 */
+    /* --muted-foreground: 0 32% 80%; /* Lighter muted foreground for placeholders #e8c7c5 - ORIGINAL */
+    /* --muted-foreground: 0 10% 75%; /* Adjusted placeholder color #C7C2C2 */
+    --muted-foreground: 6 47% 88%; /* #e8c7c5 - Directly from user request */
     --accent: 0 32% 90%; /* Even lighter shade for accents */
     --accent-foreground: 0 32% 30%; /* Darker accent foreground */
     --destructive: 0 64% 51%; /* #D32F2F - User provided accent */
@@ -59,7 +60,7 @@
     --secondary: 6 29% 49%; /* Lighter secondary */
     --secondary-foreground: 0 10% 10%;
     --muted: 0 10% 20%; /* Dark muted */
-    --muted-foreground: 0 0% 60%;
+    --muted-foreground: 6 47% 70%; /* Lighter version of #e8c7c5 for dark mode */
     --accent: 0 10% 25%; /* Dark accent */
     --accent-foreground: 0 0% 95%;
     --destructive: 0 64% 61%; /* Lighter destructive */
@@ -94,16 +95,16 @@
   }
   /* Set input text color and font weight */
    input, textarea, select {
-    @apply text-primary font-medium; /* Added font-medium */
+    @apply text-primary font-medium; /* Added font-medium, text-primary (#9e5151) */
   }
   /* Set placeholder text color specifically */
   ::placeholder {
-    @apply text-muted-foreground;
+    @apply text-muted-foreground; /* Uses --muted-foreground (#e8c7c5) */
   }
   /* Fallback for older browsers */
   input::placeholder,
   textarea::placeholder {
-    @apply text-muted-foreground;
+    @apply text-muted-foreground; /* Uses --muted-foreground (#e8c7c5) */
   }
   /* Specific overrides if needed, but prefer theme variables */
 

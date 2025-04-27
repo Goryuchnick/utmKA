@@ -9,6 +9,7 @@ import { WandSparkles, LayoutGrid, LogIn, UserPlus, UserCog, History, Settings, 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useAuth } from '@/hooks/use-auth'; // Import the dedicated auth hook
 import {
   SidebarProvider,
   Sidebar,
@@ -21,54 +22,6 @@ import {
   SidebarMenuButton,
   SidebarInset,
 } from '@/components/ui/sidebar'; // Import sidebar components
-
-// Assuming a simple check for authentication status (replace with actual auth state)
-const useAuth = () => {
-    // Replace with your actual authentication context or state management
-    const [isAuthenticated, setIsAuthenticated] = React.useState(false); // Default to not logged in
-    const [isLoading, setIsLoading] = React.useState(true); // Add loading state
-
-     // Example: Check localStorage or a cookie on mount (very basic)
-     React.useEffect(() => {
-        try {
-             // In a real app, you'd verify a token with a backend or use an auth provider SDK
-            const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
-            setIsAuthenticated(loggedIn);
-        } catch (error) {
-            console.error("Error accessing localStorage:", error);
-             // Handle potential errors (e.g., localStorage disabled)
-            setIsAuthenticated(false);
-        } finally {
-            setIsLoading(false); // Set loading to false after checking
-        }
-
-
-        // Add simple login/logout functions for testing
-        (window as any).mockLogin = () => {
-            try {
-                localStorage.setItem('isLoggedIn', 'true');
-                setIsAuthenticated(true);
-                // Use history push or router push instead of reload for better SPA experience
-                window.location.href = '/admin/history'; // Simple redirect for now
-            } catch (error) {
-                console.error("Error setting localStorage:", error);
-            }
-        };
-        (window as any).mockLogout = () => {
-            try {
-                localStorage.removeItem('isLoggedIn');
-                setIsAuthenticated(false);
-                window.location.href = '/login'; // Redirect to login after logout
-            } catch (error) {
-                console.error("Error removing localStorage:", error);
-            }
-        };
-
-     }, []);
-
-
-    return { isAuthenticated, isLoading };
-};
 
 
 const publicNavItems = [
@@ -92,20 +45,9 @@ const authNavItems = [
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isMobile = useIsMobile();
-  const { isAuthenticated, isLoading } = useAuth(); // Get auth status and loading state
+  const { isAuthenticated, isLoading, logout } = useAuth(); // Use the dedicated hook
 
-  const handleLogout = () => {
-    // Use the mock logout function if available, otherwise log
-    if ((window as any).mockLogout) {
-        (window as any).mockLogout();
-    } else {
-        console.log('Logging out...');
-        // Fallback redirect
-        window.location.href = '/login';
-    }
-  };
-
-   // Display loading state or skeleton if auth status is not yet determined
+  // Display loading state or skeleton if auth status is not yet determined
    if (isLoading) {
         // Basic loading indicator - replace with a proper Skeleton component if desired
         return (
@@ -129,6 +71,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         if (pathname === '/') return 'Главная'; // Example for root path
         // Special case for account page if not in nav items explicitly checked
         if (pathname === '/account') return 'Аккаунт';
+        // Special case for admin routes if not explicitly matched above
+        if (pathname.startsWith('/admin')) {
+             if (pathname === '/admin/history') return 'История ссылок';
+             if (pathname === '/admin/templates') return 'Шаблоны';
+        }
         return 'utmKA'; // Default title
     };
 
@@ -213,14 +160,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                                     tooltip={{ children: accountNavItem.label}}
                                     className="rounded-md" // Use rounded-md for buttons
                                 >
-                                     <Link href={accountNavItem.href}>
+                                     {/* TODO: Create /account page */}
+                                     <Link href="#">
                                         <accountNavItem.icon />
                                         <span>{accountNavItem.label}</span>
                                      </Link>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
                             <SidebarMenuItem>
-                                 <SidebarMenuButton onClick={handleLogout} tooltip={{ children: 'Выйти'}} className="rounded-md"> {/* Use rounded-md for buttons */}
+                                 <SidebarMenuButton onClick={logout} tooltip={{ children: 'Выйти'}} className="rounded-md"> {/* Use rounded-md for buttons */}
                                      <LogOut />
                                      <span>Выйти</span>
                                  </SidebarMenuButton>
@@ -233,14 +181,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {/* Remove rounded-lg from SidebarInset if using 'sidebar' variant to avoid double rounding/border */}
         <SidebarInset>
             <main className="flex-1 container mx-auto p-4 md:p-8">
-                 <h1 className="text-3xl font-bold mb-6 text-primary">
-                     {currentPageTitle}
-                 </h1>
+                 {/* Conditionally render title only if not on login/register page */}
+                 {currentPageTitle !== 'Войти' && currentPageTitle !== 'Регистрация' && (
+                     <h1 className="text-3xl font-bold mb-6 text-primary">
+                         {currentPageTitle}
+                     </h1>
+                 )}
                  {children}
              </main>
         </SidebarInset>
     </SidebarProvider>
   );
 }
-
-    

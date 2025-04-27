@@ -67,7 +67,7 @@ export default function AdminHistoryPage() {
               <p className="text-muted-foreground">История сгенерированных ссылок пуста.</p>
           ) : (
               history.map((item) => (
-                  <Card key={item.id} className="shadow-sm rounded-lg"> {/* Use rounded-lg */}
+                  <Card key={item.id} className="shadow-sm rounded-lg bg-card"> {/* Use bg-card */}
                       <CardContent className="p-4 flex flex-col md:flex-row items-start md:items-center gap-4 break-all">
                           <div className="flex-1">
                               <p className="text-secondary mb-2">{item.url}</p>

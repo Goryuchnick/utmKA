@@ -2,12 +2,14 @@
 'use client';
 
 import * as React from 'react';
+import { useRouter } from 'next/navigation'; // Import useRouter
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Mail, Lock, LogIn } from 'lucide-react'; // Import LogIn icon
 import Image from 'next/image'; // Import next/image
+import { useAuth } from '@/hooks/use-auth'; // Import useAuth
 
 // Placeholder icons for Google and Yandex - replace with actual SVGs or components if available
 const GoogleIcon = () => <Image src="/google-favicon.png" alt="Google" width={20} height={20} />; // Use local path
@@ -15,14 +17,17 @@ const YandexIcon = () => <Image src="/yandex-favicon.png" alt="Yandex" width={20
 
 
 export default function LoginPage() {
+  const router = useRouter(); // Initialize useRouter
+  const { isLoading } = useAuth(); // Get loading state from auth
+
   const handleLogin = (provider: 'google' | 'yandex' | 'email') => {
-    // TODO: Implement actual authentication logic here
+    // TODO: Implement actual authentication logic here based on provider
     console.log(`Logging in with ${provider}`);
-    // For now, simulate login and redirect
-     try {
+    // For now, simulate login and redirect using mock function or directly
+    try {
         localStorage.setItem('isLoggedIn', 'true');
-        // Use window.location.href for simplicity in this mock scenario
-        window.location.href = '/admin/history';
+        // Use router push for navigation
+        router.push('/admin/history');
     } catch (error) {
         console.error("Error setting localStorage:", error);
         // Handle potential errors (e.g., localStorage disabled)
@@ -30,9 +35,18 @@ export default function LoginPage() {
     }
   };
 
+   // Optionally, show loading state while auth is being checked
+   if (isLoading) {
+     return (
+         <div className="flex min-h-screen items-center justify-center bg-background">
+             <p className="text-primary animate-pulse">Загрузка...</p>
+         </div>
+     );
+   }
+
   return (
     <div className="container mx-auto flex min-h-screen items-center justify-center p-4 md:p-8">
-      <Card className="w-full max-w-md shadow-lg rounded-lg"> {/* Use rounded-lg */}
+      <Card className="w-full max-w-md shadow-lg rounded-lg bg-card"> {/* Use bg-card */}
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold text-primary">Вход</CardTitle>
           <CardDescription>Войдите в свой аккаунт utmKA</CardDescription>
@@ -59,10 +73,10 @@ export default function LoginPage() {
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
+              <span className="w-full border-t border-border" /> {/* Use border-border */}
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
+              <span className="bg-card px-2 text-muted-foreground"> {/* Use bg-card */}
                 Или войдите через email
               </span>
             </div>

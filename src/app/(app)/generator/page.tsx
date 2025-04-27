@@ -8,6 +8,7 @@ import * as z from 'zod';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { CalendarIcon, Copy } from 'lucide-react';
+import Link from 'next/link'; // Import Link
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,7 +29,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { translateMonth } from '@/services/date-formatter';
-import { MonthPicker } from '@/components/ui/month-picker'; // Import the new MonthPicker
+import { MonthPicker } from '@/components/ui/month-picker';
+import { useAuth } from '@/hooks/use-auth'; // Import useAuth
 
 // Updated form schema: only baseUrl and utm_source are required
 const formSchema = z.object({
@@ -67,6 +69,7 @@ export default function GeneratorPage() {
   const { toast } = useToast();
   const [generatedUrl, setGeneratedUrl] = React.useState<string>('');
   const [isDatePopoverOpen, setIsDatePopoverOpen] = React.useState(false); // State to control date picker popover
+  const { isAuthenticated, isLoading } = useAuth(); // Get auth state
 
   const {
     control,
@@ -274,10 +277,15 @@ export default function GeneratorPage() {
                             value={field.value || ''}
                             >
                             <SelectTrigger id="utm_source_preset" className="rounded-md bg-input text-primary shadow-md font-medium">
-                                <SelectValue placeholder={<span className="text-muted-foreground">Выберите источник</span>} />
+                                 {/* Use render prop for SelectValue to handle placeholder */}
+                                <SelectValue>
+                                     {field.value
+                                         ? predefinedSources.find(p => p.value === field.value)?.label || field.value
+                                         : <span className="text-muted-foreground">Выберите источник</span>
+                                     }
+                                 </SelectValue>
                             </SelectTrigger>
                             <SelectContent className="rounded-lg">
-                            {/* Removed SelectItem with empty value */}
                             {predefinedSources.map((source) => (
                                 <SelectItem key={source.value} value={source.value}>
                                 {source.label} ({source.value})
@@ -325,10 +333,14 @@ export default function GeneratorPage() {
                             value={field.value || ''}
                             >
                             <SelectTrigger id="utm_medium_preset" className="rounded-md bg-input text-primary shadow-md font-medium">
-                                <SelectValue placeholder={<span className="text-muted-foreground">Выберите канал</span>} />
+                                <SelectValue>
+                                     {field.value
+                                         ? predefinedMediums.find(p => p.value === field.value)?.label || field.value
+                                         : <span className="text-muted-foreground">Выберите канал</span>
+                                     }
+                                </SelectValue>
                             </SelectTrigger>
                             <SelectContent className="rounded-lg">
-                            {/* Removed SelectItem with empty value */}
                             {predefinedMediums.map((medium) => (
                                 <SelectItem key={medium.value} value={medium.value}>
                                 {medium.label} ({medium.value})
@@ -435,6 +447,16 @@ export default function GeneratorPage() {
           </CardContent>
         </Card>
       )}
+
+       {/* Conditional Login Prompt */}
+        {!isLoading && !isAuthenticated && (
+             <p className="text-sm text-muted-foreground text-center mt-4">
+                 Чтобы смотреть историю создания размеченных ссылок,{' '}
+                 <Link href="/login" className="font-bold text-primary hover:underline">
+                     войдите в аккаунт →
+                 </Link>
+             </p>
+         )}
     </div>
   );
 }
