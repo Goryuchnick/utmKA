@@ -299,18 +299,20 @@ export default function TemplatesPage() {
                      {getGroupName(template.groupId) || 'Без группы'}
                  </div>
              )}
-            <CardHeader className={cn("pb-2", template.groupId ? "pt-1" : "")}> {/* Adjust padding if group name is shown */}
+            <CardHeader className={cn("pb-0", template.groupId ? "pt-1" : "pt-4")}> {/* Adjusted padding */}
                 <CardTitle className="text-lg font-semibold">{template.name}</CardTitle>
                  <span className="text-xs text-muted-foreground pt-1">
                     {format(template.createdAt, 'dd MMM yyyy', { locale: ru })}
                  </span>
             </CardHeader>
-            <CardContent className="text-sm space-y-1 pb-2 flex-grow"> {/* Added flex-grow */}
-                {template.utm_source && <p><strong>Источник:</strong> {template.utm_source}</p>}
-                {template.utm_medium && <p><strong>Канал:</strong> {template.utm_medium}</p>}
-                {!template.utm_source && !template.utm_medium && <p className="text-muted-foreground">Источник и канал не заданы</p>}
+            <CardContent className="text-sm space-y-1 pb-0 pt-2 flex-grow"> {/* Adjusted padding, Added flex-grow */}
+                 <div className="flex flex-col justify-end h-full"> {/* Align content towards bottom */}
+                     {template.utm_source && <p><strong>Источник:</strong> {template.utm_source}</p>}
+                     {template.utm_medium && <p><strong>Канал:</strong> {template.utm_medium}</p>}
+                     {!template.utm_source && !template.utm_medium && <p className="text-muted-foreground">Источник и канал не заданы</p>}
+                 </div>
             </CardContent>
-            <div className="flex justify-end gap-2 px-4 pb-4 pt-2 mt-auto"> {/* Added mt-auto */}
+            <div className="flex justify-end gap-2 px-4 pb-3 pt-3 mt-auto"> {/* Adjusted padding, Added mt-auto */}
                 <Button variant="outline" size="icon" onClick={() => openDialogForEditTemplate(template)} className="h-8 w-8 rounded-md shadow-sm hover:shadow">
                     <Edit className="h-4 w-4" />
                     <span className="sr-only">Редактировать</span>
@@ -547,7 +549,8 @@ export default function TemplatesPage() {
                     <Card className="shadow-sm rounded-lg bg-card overflow-hidden">
                          {/* Wrapper div for horizontal scrolling on mobile */}
                         <div className="w-full overflow-x-auto">
-                            <Table className="min-w-max"> {/* Ensure table takes minimum width needed */}
+                            {/* Remove whitespace around the Table component */}
+                            <Table className="min-w-max">{/* Ensure table takes minimum width needed */}
                                 <TableHeader>
                                     <TableRow>
                                         <SortableTableHead column="name" label="Название" />
