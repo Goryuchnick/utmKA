@@ -28,22 +28,7 @@ const SelectValue = React.forwardRef<
 ));
 SelectValue.displayName = SelectPrimitive.Value.displayName
 
-// Custom Overlay for Select dropdowns
-const SelectOverlay = React.forwardRef<
-  React.ElementRef<typeof SelectPrimitive.Overlay>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Overlay>
->(({ className, ...props }, ref) => (
-  <SelectPrimitive.Overlay
-    className={cn(
-      "fixed inset-0 z-40 bg-black/60 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0", // z-40 to be behind content, apply blur/dim
-      className
-    )}
-    {...props}
-    ref={ref}
-  />
-));
-SelectOverlay.displayName = 'SelectOverlay';
-
+// Removed SelectOverlay definition as it doesn't exist in @radix-ui/react-select
 
 const SelectTrigger = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Trigger>,
@@ -109,7 +94,7 @@ const SelectContent = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
 >(({ className, children, position = "popper", sideOffset = 4, ...props }, ref) => (
   <SelectPrimitive.Portal>
-    <SelectOverlay /> {/* Add the overlay */}
+    {/* Removed SelectOverlay usage */}
     <SelectPrimitive.Content
       ref={ref}
       className={cn(
@@ -119,7 +104,7 @@ const SelectContent = React.forwardRef<
         className
       )}
       position={position}
-      sideOffset={sideOffset}
+      sideOffset={sideOffset} // Add sideOffset prop
       {...props}
     >
       <SelectScrollUpButton />
@@ -210,5 +195,3 @@ export {
   SelectScrollUpButton,
   SelectScrollDownButton,
 }
-
-    
