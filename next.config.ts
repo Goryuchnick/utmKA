@@ -18,6 +18,8 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // If Droid Sans Mono needs specific handling or isn't available via Google Fonts,
+  // additional configuration might be needed here, but next/font handles it usually.
 };
 
 export default nextConfig;

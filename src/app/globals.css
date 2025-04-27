@@ -2,31 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: Arial, Helvetica, sans-serif;
-}
-
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
-    --destructive: 0 84.2% 60.2%;
+    --background: 0 60% 97%; /* #FBF4F4 */
+    --foreground: 0 10% 20%; /* Derived dark brown/grey */
+    --card: 0 60% 97%; /* #FBF4F4 */
+    --card-foreground: 0 10% 20%;
+    --popover: 0 60% 97%; /* #FBF4F4 */
+    --popover-foreground: 0 10% 20%;
+    --primary: 0 32% 47%; /* #9e5151 */
+    --primary-foreground: 0 0% 100%; /* White for contrast on primary */
+    --secondary: 6 29% 39%; /* #834944 */
+    --secondary-foreground: 0 0% 100%; /* White for contrast on secondary */
+    --muted: 0 32% 95%; /* Lighter shade of primary */
+    --muted-foreground: 0 32% 40%; /* Darker muted */
+    --accent: 0 32% 90%; /* Even lighter shade for accents */
+    --accent-foreground: 0 32% 30%; /* Darker accent foreground */
+    --destructive: 0 64% 51%; /* #D32F2F - User provided accent */
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
+    --border: 0 32% 85%; /* Derived from primary/background */
+    --input: 0 32% 90%; /* Derived from primary/background */
+    --ring: 0 32% 47%; /* Primary color #9e5151 */
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
@@ -42,26 +38,28 @@ body {
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
+
   .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
+    /* Define dark mode colors if needed, otherwise use light mode defaults */
+    --background: 0 10% 10%; /* Dark background */
+    --foreground: 0 0% 95%; /* Light foreground */
+    --card: 0 10% 12%; /* Slightly lighter dark */
+    --card-foreground: 0 0% 95%;
+    --popover: 0 10% 10%;
+    --popover-foreground: 0 0% 95%;
+    --primary: 0 32% 57%; /* Lighter primary for dark mode */
+    --primary-foreground: 0 10% 10%; /* Dark text on light primary */
+    --secondary: 6 29% 49%; /* Lighter secondary */
+    --secondary-foreground: 0 10% 10%;
+    --muted: 0 10% 20%; /* Dark muted */
+    --muted-foreground: 0 0% 60%;
+    --accent: 0 10% 25%; /* Dark accent */
+    --accent-foreground: 0 0% 95%;
+    --destructive: 0 64% 61%; /* Lighter destructive */
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
+    --border: 0 10% 30%; /* Dark border */
+    --input: 0 10% 25%; /* Dark input */
+    --ring: 0 32% 57%; /* Lighter primary for ring */
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
@@ -84,5 +82,17 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+    /* Remove default font-family to allow next/font */
   }
+}
+
+/* Custom styles for date display */
+.date-display {
+    border: 2px solid hsl(var(--secondary));
+    color: hsl(var(--secondary));
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius);
+    font-size: calc(1em - 3px); /* 3px smaller than parent */
+    background: transparent;
+    cursor: default; /* Non-clickable */
 }
