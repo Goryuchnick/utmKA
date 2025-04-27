@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Mail, Lock, UserPlus } from 'lucide-react';
 import Image from 'next/image';
 import { useAuth } from '@/hooks/use-auth'; // Import useAuth
+import { useToast } from '@/hooks/use-toast'; // Import useToast for feedback
 
 // Define Zod schema for registration form validation
 const registerSchema = z.object({
@@ -26,14 +27,20 @@ const registerSchema = z.object({
 
 type RegisterFormData = z.infer<typeof registerSchema>;
 
-// Placeholder icons for Google and Yandex - replace with actual SVGs or components if available
-const GoogleIcon = () => <Image src="/google-favicon.png" alt="Google" width={20} height={20} />; // Use local path
+// Inline SVG for VK Icon
+const VkIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M13.125 10.082v4.82h2.505c.196 0 .39-.02.582-.058 1.735-.35 2.938-1.444 2.938-3.034 0-1.41-.87-2.436-2.544-2.786a4.36 4.36 0 0 0-.976-.142h-2.505zm-2.06 6.712H8.63c-.486 0-.88-.394-.88-.88V8.177c0-.486.394-.88.88-.88h4.656c2.63 0 4.053.85 4.613 2.04.47.998.516 2.18.108 3.39-.56 1.677-2.28 2.81-4.9 2.955v.006h-.16c-.16.01-.322.015-.484.015zm6.56-12.386c.39-.204.63-.59.63-.994 0-.74-.6-1.34-1.34-1.34h-1.794c-.44 0-.8.36-.8.8s.36.8.8.8h1.618c.1 0 .18.08.18.18s-.08.18-.18.18h-1.618c-.44 0-.8.36-.8.8s.36.8.8.8h1.794c.74 0 1.34-.6 1.34-1.34zm-14.136.268c0-.486.394-.88.88-.88h1.78c.486 0 .88.394.88.88v8.832c0 .486-.394.88-.88.88h-1.78c-.486 0-.88-.394-.88-.88V4.676z"/>
+    </svg>
+);
+// Placeholder icon for Yandex - replace with actual SVG or component if available
 const YandexIcon = () => <Image src="/yandex-favicon.png" alt="Yandex" width={20} height={20} />; // Use local path
 
 
 export default function RegisterPage() {
     const router = useRouter(); // Initialize useRouter
-    const { isLoading } = useAuth(); // Get loading state
+    const { register, isLoading, isAuthenticated } = useAuth(); // Use register from useAuth
+    const { toast } = useToast(); // Initialize toast
 
     const { control, handleSubmit, formState: { errors } } = useForm<RegisterFormData>({
         resolver: zodResolver(registerSchema),
@@ -44,30 +51,28 @@ export default function RegisterPage() {
         }
     });
 
-    const handleRegisterSubmit = (data: RegisterFormData) => {
-        // This function is called when the form is valid
-        console.log('Registering with email:', data.email);
-        // TODO: Implement actual registration logic here for email/password
-        try {
-            localStorage.setItem('isLoggedIn', 'true');
-            // Use router push for navigation
-            router.push('/admin/history');
-        } catch (error) {
-            console.error("Error setting localStorage:", error);
-             // Handle potential errors (e.g., localStorage disabled)
-            alert("Не удалось сохранить статус входа. Пожалуйста, убедитесь, что ваше хранилище не отключено.");
+     // Redirect if already authenticated
+    React.useEffect(() => {
+        if (!isLoading && isAuthenticated) {
+            router.push('/admin/history'); // Redirect logged-in users
         }
+    }, [isLoading, isAuthenticated, router]);
+
+
+    const handleRegisterSubmit = async (data: RegisterFormData) => {
+        await register(data.email, data.password, 'email');
+        // The register function in useAuth will handle redirection on success/failure
     };
 
-    const handleOAuthRegister = (provider: 'google' | 'yandex') => {
-        // TODO: Implement actual OAuth registration logic here
-        console.log(`Registering with ${provider}`);
-        try {
-            localStorage.setItem('isLoggedIn', 'true');
-            router.push('/admin/history');
-        } catch (error) {
-            console.error("Error setting localStorage:", error);
-            alert("Не удалось сохранить статус входа.");
+    const handleOAuthRegister = async (provider: 'vk' | 'yandex') => {
+        // TODO: Implement actual OAuth registration initiation here
+        console.log(`Initiating OAuth registration with ${provider}`);
+        // Example: Redirect to backend or OAuth provider URL
+        // window.location.href = `/api/auth/${provider}/register`; // Example backend route
+
+        // Placeholder for demo purposes:
+        if (provider === 'vk' || provider === 'yandex') {
+            await register(provider, '', provider); // Pass provider name as 'email' for OAuth
         }
     };
 
@@ -80,6 +85,11 @@ export default function RegisterPage() {
         );
     }
 
+    // Prevent rendering register page if already logged in
+    if (isAuthenticated) {
+        return null; // Or a loading indicator while redirecting
+    }
+
     return (
         <div className="container mx-auto flex min-h-screen items-center justify-center p-4 md:p-8">
             <Card className="w-full max-w-md shadow-lg rounded-lg bg-card"> {/* Use bg-card */}
@@ -89,18 +99,21 @@ export default function RegisterPage() {
                 </CardHeader>
                 <CardContent className="space-y-6">
                     <div className="space-y-4">
+                         {/* VK Register Button */}
                         <Button
                             variant="outline"
                             className="w-full rounded-md shadow-sm" // Use rounded-md
-                            onClick={() => handleOAuthRegister('google')}
+                            onClick={() => handleOAuthRegister('vk')}
+                            type="button" // Ensure it doesn't submit the form
                         >
-                            <GoogleIcon />
-                            <span className="ml-2">Зарегистрироваться через Google</span>
+                            <VkIcon />
+                            <span className="ml-2">Зарегистрироваться через VK ID</span>
                         </Button>
                         <Button
                             variant="outline"
                             className="w-full rounded-md shadow-sm" // Use rounded-md
                             onClick={() => handleOAuthRegister('yandex')}
+                            type="button" // Ensure it doesn't submit the form
                         >
                            <YandexIcon />
                             <span className="ml-2">Зарегистрироваться через Яндекс</span>
@@ -177,4 +190,3 @@ export default function RegisterPage() {
         </div>
     );
 }
-
