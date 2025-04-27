@@ -2,13 +2,21 @@
 'use client';
 
 import * as React from 'react';
-import { PlusCircle, Edit, Trash2, List, LayoutGrid, Filter, FolderPlus, Folder, Calendar as CalendarIcon } from 'lucide-react'; // Added icons
+import { PlusCircle, Edit, Trash2, List, LayoutGrid, Filter, FolderPlus, Folder, Calendar as CalendarIcon, TableIcon } from 'lucide-react'; // Added TableIcon
 import { format, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns'; // Date functions
 import { ru } from 'date-fns/locale'; // Russian locale
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"; // Import Table components
 import {
   Dialog,
   DialogContent,
@@ -55,8 +63,8 @@ const mockTemplates: Template[] = [
 
 const TEMPLATES_VIEW_MODE_STORAGE_KEY = 'utmka_templates_view_mode';
 
-type ViewMode = 'list' | 'grid';
-type FilterType = 'all' | 'source' | 'medium' | 'date';
+type ViewMode = 'list' | 'grid' | 'table'; // Added 'table' view mode
+type FilterType = 'all' | 'source' | 'medium' | 'date' | 'group'; // Added 'group' filter type
 type DateFilterRange = 'all' | 'this_month' | 'this_year' | 'custom';
 
 export default function TemplatesPage() {
@@ -82,7 +90,7 @@ export default function TemplatesPage() {
     React.useEffect(() => {
         try {
             const storedViewMode = localStorage.getItem(TEMPLATES_VIEW_MODE_STORAGE_KEY) as ViewMode | null;
-            if (storedViewMode && (storedViewMode === 'list' || storedViewMode === 'grid')) {
+            if (storedViewMode && ['list', 'grid', 'table'].includes(storedViewMode)) {
                 setViewMode(storedViewMode);
             }
         } catch (error) {
@@ -201,11 +209,10 @@ export default function TemplatesPage() {
     const filteredTemplates = React.useMemo(() => {
         let filtered = templates;
 
-        // Filter by Group
-        if (selectedGroupFilter !== 'all') {
-            filtered = filtered.filter(t => t.groupId === selectedGroupFilter);
+        // Filter by Group if the filter type is 'group'
+        if (filterType === 'group' && selectedGroupFilter !== 'all') {
+            filtered = filtered.filter(t => t.groupId === selectedGroupFilter || (selectedGroupFilter === 'none' && !t.groupId));
         }
-
 
         // Filter by Type (Source/Medium Text)
         if (filterType === 'source' && filterValue) {
@@ -308,6 +315,28 @@ export default function TemplatesPage() {
         </Card>
     );
 
+    const renderTemplateTableRow = (template: Template) => (
+        <TableRow key={template.id}>
+            <TableCell className="font-medium">{template.name}</TableCell>
+            <TableCell>{template.utm_source || '-'}</TableCell>
+            <TableCell>{template.utm_medium || '-'}</TableCell>
+            <TableCell>{groups.find(g => g.id === template.groupId)?.name || 'Без группы'}</TableCell>
+            <TableCell>{format(template.createdAt, 'dd MMM yyyy', { locale: ru })}</TableCell>
+            <TableCell className="text-right">
+                 <div className="flex justify-end gap-2">
+                    <Button variant="outline" size="icon" onClick={() => openDialogForEditTemplate(template)} className="h-8 w-8 rounded-md shadow-sm hover:shadow">
+                        <Edit className="h-4 w-4" />
+                        <span className="sr-only">Редактировать</span>
+                    </Button>
+                    <Button variant="destructive" size="icon" onClick={() => handleDeleteTemplate(template.id)} className="h-8 w-8 rounded-md shadow-sm hover:shadow">
+                        <Trash2 className="h-4 w-4" />
+                         <span className="sr-only">Удалить</span>
+                    </Button>
+                </div>
+            </TableCell>
+        </TableRow>
+    );
+
 
     return (
         <div className="space-y-6">
@@ -408,7 +437,7 @@ export default function TemplatesPage() {
 
                     {/* View Mode Switcher */}
                     <div className="flex gap-2 ml-auto">
-                        <Button
+                         <Button
                             variant={viewMode === 'list' ? 'secondary' : 'outline'}
                             size="icon"
                             onClick={() => handleSetViewMode('list')}
@@ -426,23 +455,18 @@ export default function TemplatesPage() {
                         >
                             <LayoutGrid className="h-4 w-4" />
                         </Button>
+                         <Button
+                            variant={viewMode === 'table' ? 'secondary' : 'outline'}
+                            size="icon"
+                            onClick={() => handleSetViewMode('table')}
+                            className="h-8 w-8 rounded-md shadow-sm hover:shadow"
+                            aria-label="Table view"
+                        >
+                            <TableIcon className="h-4 w-4" /> {/* Added Table View Button */}
+                        </Button>
                     </div>
                 </div>
             </div>
-
-
-            {/* Display Groups (Optional - could be integrated into filtering) */}
-             {/* <div className="flex flex-wrap gap-2">
-                 {groups.map(group => (
-                     <Card key={group.id} className="p-2 rounded-md shadow-sm bg-muted flex items-center gap-2 text-sm">
-                         <Folder size={16} />
-                         <span>{group.name}</span>
-                          <Button variant="ghost" size="icon" className="h-5 w-5 ml-auto" onClick={() => handleDeleteGroup(group.id)}>
-                             <Trash2 className="h-3 w-3 text-destructive" />
-                         </Button>
-                     </Card>
-                 ))}
-             </div> */}
 
 
             {filteredTemplates.length === 0 ? (
@@ -455,11 +479,30 @@ export default function TemplatesPage() {
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         {filteredTemplates.map(renderTemplateCard)}
                     </div>
-                ) : (
+                ) : viewMode === 'list' ? (
                     // List View
                     <div className="space-y-4">
                         {filteredTemplates.map(renderTemplateListItem)}
                     </div>
+                ) : (
+                   // Table View
+                    <Card className="shadow-sm rounded-lg bg-card">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Название</TableHead>
+                                    <TableHead>Источник</TableHead>
+                                    <TableHead>Канал</TableHead>
+                                    <TableHead>Группа</TableHead>
+                                    <TableHead>Дата</TableHead>
+                                    <TableHead className="text-right">Действия</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredTemplates.map(renderTemplateTableRow)}
+                            </TableBody>
+                        </Table>
+                    </Card>
                 )
             )}
 
