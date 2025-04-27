@@ -4,7 +4,7 @@
 import * as React from "react"
 import { format, addMonths, subMonths, setMonth, setYear, getYear, getMonth } from "date-fns"
 import { ru } from 'date-fns/locale'; // Import Russian locale
-import { ChevronLeft, ChevronRight, CalendarCheck } from "lucide-react" // Added CalendarCheck icon
+import { ChevronLeft, ChevronRight, CalendarCheck, XCircle } from "lucide-react" // Added XCircle icon
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -78,6 +78,11 @@ const MonthPicker = ({
     onSelect?.(today);
   };
 
+  const handleRemoveClick = () => {
+    setSelectedDate(undefined); // Clear local state
+    onSelect?.(undefined); // Call onSelect with undefined
+  };
+
 
   const years = Array.from({ length: toYear - fromYear + 1 }, (_, i) => fromYear + i);
   const months = Array.from({ length: 12 }, (_, i) => i);
@@ -136,15 +141,23 @@ const MonthPicker = ({
           );
         })}
       </div>
-       {/* Today Button */}
-       <div className="flex justify-center">
+       {/* Action Buttons: Today & Remove */}
+       <div className="flex justify-center gap-2 mt-2"> {/* Use flex and gap */}
            <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleTodayClick}
-                className="rounded-md text-primary hover:bg-accent hover:text-primary/80 w-full" // Make button full width
+                className="flex-1 rounded-md text-primary hover:bg-accent hover:text-primary/80" // Use flex-1
             >
                 <CalendarCheck className="mr-2 h-4 w-4" /> Сегодня
+            </Button>
+            <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleRemoveClick}
+                className="flex-1 rounded-md text-destructive hover:bg-destructive/10 hover:text-destructive" // Destructive-like style, Use flex-1
+            >
+                <XCircle className="mr-2 h-4 w-4" /> Сбросить
             </Button>
         </div>
     </div>

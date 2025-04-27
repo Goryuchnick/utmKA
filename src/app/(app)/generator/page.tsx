@@ -210,20 +210,24 @@ export default function GeneratorPage() {
     // Save the generated URL to history (for both logged in and guest users)
     try {
         const currentHistoryString = localStorage.getItem(HISTORY_STORAGE_KEY);
-        // Parse history, keeping dates as strings initially
         const currentHistory: HistoryItem[] = currentHistoryString ? JSON.parse(currentHistoryString) : [];
+
+        // Ensure all dates in currentHistory are Date objects before proceeding
+        const currentHistoryDates: HistoryItem[] = currentHistory.map(item => ({
+          ...item,
+          date: typeof item.date === 'string' ? new Date(item.date) : item.date,
+        }));
+
 
         const newHistoryItem: HistoryItem = {
             id: Date.now().toString(), // Simple unique ID
             url: finalUrl,
-            date: new Date().toISOString(), // Store new date as ISO string
+            date: new Date(), // Store as Date object initially
         };
 
-        // Add new item (with ISO string date) and existing history (with string dates)
-        const updatedHistory = [newHistoryItem, ...currentHistory]; // Add to the beginning
-
-        // Save the updated history directly (all dates are strings now)
-        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updatedHistory));
+        // Add new item and save back to localStorage
+        const updatedHistory = [newHistoryItem, ...currentHistoryDates]; // Add to the beginning
+        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updatedHistory.map(item => ({ ...item, date: item.date instanceof Date ? item.date.toISOString() : item.date })))); // Save dates as ISO strings
 
         // If authenticated, you might also sync this with a backend database here
         // if (isAuthenticated) {
@@ -316,7 +320,8 @@ export default function GeneratorPage() {
     // Handler to close popover after selecting a date in MonthPicker
     const handleDateSelect = (date: Date | undefined, onChange: (...event: any[]) => void) => {
         onChange(date);
-        setIsDatePopoverOpen(false); // Close the popover
+        // Close popover regardless of whether a date was selected or cleared
+        setIsDatePopoverOpen(false);
     };
 
 
