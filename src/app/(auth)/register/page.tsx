@@ -10,21 +10,29 @@ import { Mail, Lock, UserPlus } from 'lucide-react';
 import Image from 'next/image';
 
 // Placeholder icons for Google and Yandex - replace with actual SVGs or components if available
-const GoogleIcon = () => <Image src="https://www.google.com/favicon.ico" alt="Google" width={20} height={20} />;
-const YandexIcon = () => <Image src="https://yandex.ru/favicon.ico" alt="Yandex" width={20} height={20} />;
+const GoogleIcon = () => <Image src="/google-favicon.png" alt="Google" width={20} height={20} />; // Use local path
+const YandexIcon = () => <Image src="/yandex-favicon.png" alt="Yandex" width={20} height={20} />; // Use local path
 
 
 export default function RegisterPage() {
     const handleRegister = (provider: 'google' | 'yandex' | 'email') => {
         // TODO: Implement actual registration logic here
         console.log(`Registering with ${provider}`);
-         // For now, redirect to admin panel on any registration attempt
-        window.location.href = '/admin/history'; // Using window.location for simplicity, replace with router.push in a real app
+         // For now, simulate login and redirect
+        try {
+            localStorage.setItem('isLoggedIn', 'true');
+            // Use window.location.href for simplicity in this mock scenario
+            window.location.href = '/admin/history';
+        } catch (error) {
+            console.error("Error setting localStorage:", error);
+             // Handle potential errors (e.g., localStorage disabled)
+            alert("Не удалось сохранить статус входа. Пожалуйста, убедитесь, что ваше хранилище не отключено.");
+        }
     };
 
     return (
         <div className="container mx-auto flex min-h-screen items-center justify-center p-4 md:p-8">
-            <Card className="w-full max-w-md shadow-lg rounded-lg">
+            <Card className="w-full max-w-md shadow-lg rounded-lg"> {/* Use rounded-lg */}
                 <CardHeader className="text-center">
                     <CardTitle className="text-2xl font-bold text-primary">Регистрация</CardTitle>
                     <CardDescription>Создайте новый аккаунт utmKA</CardDescription>
@@ -33,7 +41,7 @@ export default function RegisterPage() {
                     <div className="space-y-4">
                         <Button
                             variant="outline"
-                            className="w-full rounded-md shadow-sm"
+                            className="w-full rounded-md shadow-sm" // Use rounded-md
                             onClick={() => handleRegister('google')}
                         >
                             <GoogleIcon />
@@ -41,7 +49,7 @@ export default function RegisterPage() {
                         </Button>
                         <Button
                             variant="outline"
-                            className="w-full rounded-md shadow-sm"
+                            className="w-full rounded-md shadow-sm" // Use rounded-md
                             onClick={() => handleRegister('yandex')}
                         >
                            <YandexIcon />
@@ -65,24 +73,24 @@ export default function RegisterPage() {
                             <Label htmlFor="email">Email</Label>
                             <div className="relative">
                                 <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                                <Input id="email" type="email" placeholder="m@example.com" required className="pl-10 rounded-md shadow-sm" />
+                                <Input id="email" type="email" placeholder="m@example.com" required className="pl-10 rounded-md shadow-sm" /> {/* Use rounded-md */}
                             </div>
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="password">Пароль</Label>
                             <div className="relative">
                                 <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                                <Input id="password" type="password" required className="pl-10 rounded-md shadow-sm" />
+                                <Input id="password" type="password" required className="pl-10 rounded-md shadow-sm" /> {/* Use rounded-md */}
                             </div>
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="confirm-password">Подтвердите Пароль</Label>
                              <div className="relative">
                                 <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                                <Input id="confirm-password" type="password" required className="pl-10 rounded-md shadow-sm" />
+                                <Input id="confirm-password" type="password" required className="pl-10 rounded-md shadow-sm" /> {/* Use rounded-md */}
                             </div>
                         </div>
-                        <Button type="submit" className="w-full rounded-md shadow-md hover:shadow-lg transition-shadow">
+                        <Button type="submit" className="w-full rounded-md shadow-md hover:shadow-lg transition-shadow"> {/* Use rounded-md */}
                              <UserPlus className="mr-2 h-4 w-4" /> Зарегистрироваться
                         </Button>
                     </form>

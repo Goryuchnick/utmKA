@@ -48,7 +48,8 @@ const useAuth = () => {
             try {
                 localStorage.setItem('isLoggedIn', 'true');
                 setIsAuthenticated(true);
-                window.location.reload(); // Reload to reflect changes in layout
+                // Use history push or router push instead of reload for better SPA experience
+                window.location.href = '/admin/history'; // Simple redirect for now
             } catch (error) {
                 console.error("Error setting localStorage:", error);
             }
@@ -106,7 +107,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
    // Display loading state or skeleton if auth status is not yet determined
    if (isLoading) {
-        return <div className="flex min-h-screen items-center justify-center">Loading...</div>; // Or a proper skeleton loader
+        // Basic loading indicator - replace with a proper Skeleton component if desired
+        return (
+            <div className="flex min-h-screen items-center justify-center bg-background">
+                <p className="text-primary animate-pulse">Загрузка...</p>
+            </div>
+        );
     }
 
 
@@ -121,6 +127,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         }
         // Fallback titles for specific paths if needed
         if (pathname === '/') return 'Главная'; // Example for root path
+        // Special case for account page if not in nav items explicitly checked
+        if (pathname === '/account') return 'Аккаунт';
         return 'utmKA'; // Default title
     };
 
@@ -128,11 +136,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider defaultOpen={!isMobile} >
-       <Sidebar collapsible="icon" variant="sidebar" side="left">
-           <SidebarHeader className="items-center gap-2 border-b p-3 group-data-[collapsible=icon]:justify-center">
+       <Sidebar collapsible="icon" variant="sidebar" side="left" className="border-none"> {/* Remove sidebar border if desired */}
+           <SidebarHeader className="items-center gap-2 border-b border-sidebar-border p-3 group-data-[collapsible=icon]:justify-center">
                 <Link href="/generator" className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
+                    {/* Consider adding your logo/icon here */}
                     <LayoutGrid className="h-6 w-6 text-primary" />
-                    <span className="font-bold text-primary">utmKA</span>
+                    <span className="font-bold text-primary text-lg">utmKA</span>
                  </Link>
                 <SidebarTrigger className="ml-auto group-data-[collapsible=icon]:ml-0" />
            </SidebarHeader>
@@ -143,8 +152,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                         <SidebarMenuItem key={item.href}>
                              <SidebarMenuButton
                                 asChild
-                                isActive={pathname.startsWith(item.href)} // Use startsWith
+                                isActive={pathname.startsWith(item.href)}
                                 tooltip={{ children: item.label}}
+                                className="rounded-lg" // Apply rounded-lg to buttons
                              >
                                 <Link href={item.href}>
                                      <item.icon />
@@ -159,8 +169,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                         <SidebarMenuItem key={item.href}>
                              <SidebarMenuButton
                                 asChild
-                                isActive={pathname.startsWith(item.href)} // Use startsWith
+                                isActive={pathname.startsWith(item.href)}
                                 tooltip={{ children: item.label}}
+                                className="rounded-lg" // Apply rounded-lg to buttons
                              >
                                 <Link href={item.href}>
                                      <item.icon />
@@ -171,7 +182,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     ))}
                 </SidebarMenu>
            </SidebarContent>
-           <SidebarFooter className="border-t p-2">
+           <SidebarFooter className="border-t border-sidebar-border p-2">
                 <SidebarMenu>
                      {/* Auth Links (Unauthenticated) */}
                     {!isAuthenticated && authNavItems.map((item) => (
@@ -180,6 +191,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                                 asChild
                                 isActive={pathname.startsWith(item.href)}
                                 tooltip={{ children: item.label}}
+                                className="rounded-lg" // Apply rounded-lg to buttons
                             >
                                 <Link href={item.href}>
                                     <item.icon />
@@ -197,6 +209,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                                     asChild
                                     isActive={pathname === accountNavItem.href}
                                     tooltip={{ children: accountNavItem.label}}
+                                    className="rounded-lg" // Apply rounded-lg to buttons
                                 >
                                      <Link href={accountNavItem.href}>
                                         <accountNavItem.icon />
@@ -205,7 +218,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
                             <SidebarMenuItem>
-                                 <SidebarMenuButton onClick={handleLogout} tooltip={{ children: 'Выйти'}}>
+                                 <SidebarMenuButton onClick={handleLogout} tooltip={{ children: 'Выйти'}} className="rounded-lg"> {/* Apply rounded-lg to buttons */}
                                      <LogOut />
                                      <span>Выйти</span>
                                  </SidebarMenuButton>
@@ -215,10 +228,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </SidebarMenu>
            </SidebarFooter>
        </Sidebar>
-        <SidebarInset>
-             {/* Removed static header and footer */}
+        {/* Apply rounded-lg to the main content area */}
+        <SidebarInset className="rounded-lg">
             <main className="flex-1 container mx-auto p-4 md:p-8">
-                 {/* Dynamic Title */}
                  <h1 className="text-3xl font-bold mb-6 text-primary">
                      {currentPageTitle}
                  </h1>

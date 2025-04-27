@@ -40,7 +40,14 @@ const formSchema = z.object({
   utm_campaign_date: z.date().optional(),
   utm_term: z.string().optional(),
   utm_content: z.string().optional(),
+}).refine(data => data.utm_source_custom || data.utm_source_preset, {
+    message: "Источник (utm_source) должен быть указан.", // Example validation message
+    path: ["utm_source_custom"], // You might want to adjust the path
+}).refine(data => data.utm_medium_custom || data.utm_medium_preset, {
+    message: "Канал (utm_medium) должен быть указан.", // Example validation message
+    path: ["utm_medium_custom"], // You might want to adjust the path
 });
+
 
 type FormData = z.infer<typeof formSchema>;
 
@@ -67,6 +74,7 @@ export default function GeneratorPage() {
     watch,
     setValue,
     formState: { errors },
+    trigger, // Add trigger for manual validation
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -81,14 +89,24 @@ export default function GeneratorPage() {
     },
   });
 
-  const onSubmit = (data: FormData) => {
+ const onSubmit = async (data: FormData) => {
+    // Manually trigger validation for all fields before processing
+    const isValid = await trigger();
+    if (!isValid) {
+        // Optionally show a generic error toast or rely on individual field errors
+        toast({
+            title: "Ошибка валидации",
+            description: "Пожалуйста, исправьте ошибки в форме.",
+            variant: "destructive",
+        });
+        return; // Stop submission if validation fails
+    }
+
     const url = new URL(data.baseUrl);
     const params = new URLSearchParams();
 
-    // Use the custom fields as the source of truth, as they contain
-    // either the manually entered value or the value from the preset.
-    const utmSource = data.utm_source_custom;
-    const utmMedium = data.utm_medium_custom;
+    const utmSource = data.utm_source_custom || data.utm_source_preset;
+    const utmMedium = data.utm_medium_custom || data.utm_medium_preset;
 
     if (utmSource) params.set('utm_source', utmSource);
     if (utmMedium) params.set('utm_medium', utmMedium);
@@ -107,15 +125,14 @@ export default function GeneratorPage() {
     if (data.utm_term) params.set('utm_term', data.utm_term);
     if (data.utm_content) params.set('utm_content', data.utm_content);
 
-    // Only add params if there are any
     if (params.toString()) {
         url.search = params.toString();
     } else {
         url.search = ''; // Ensure no trailing '?' if no params
     }
     setGeneratedUrl(url.toString());
-     // TODO: Save the generated URL to history (likely requires API call/state management)
-     console.log('Saving to history:', url.toString()); // Placeholder
+    // TODO: Save the generated URL to history (likely requires API call/state management)
+    console.log('Saving to history:', url.toString()); // Placeholder
   };
 
   const copyToClipboard = () => {
@@ -128,12 +145,28 @@ export default function GeneratorPage() {
     }
   };
 
+  // Watch changes in preset fields to update custom fields
+   React.useEffect(() => {
+        const subscription = watch((value, { name }) => {
+            if (name === 'utm_source_preset' && value.utm_source_preset) {
+                setValue('utm_source_custom', value.utm_source_preset);
+                trigger('utm_source_custom'); // Trigger validation after update
+            }
+            if (name === 'utm_medium_preset' && value.utm_medium_preset) {
+                setValue('utm_medium_custom', value.utm_medium_preset);
+                 trigger('utm_medium_custom'); // Trigger validation after update
+            }
+        });
+        return () => subscription.unsubscribe();
+    }, [watch, setValue, trigger]);
+
   return (
-    <div className="space-y-8"> {/* Added space-y for spacing between elements */}
-      {/* The h1 title is removed from here and handled in AppLayout */}
-      <Card className="shadow-md rounded-lg">
+    <div className="space-y-8">
+      {/* Card for Form Inputs */}
+      <Card className="shadow-md rounded-lg"> {/* Use rounded-lg for 15px */}
         <CardContent className="p-6">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            {/* Base URL */}
             <div>
               <Label htmlFor="baseUrl">URL сайта *</Label>
               <Controller
@@ -146,115 +179,120 @@ export default function GeneratorPage() {
               {errors.baseUrl && <p className="text-destructive text-sm mt-1">{errors.baseUrl.message}</p>}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="utm_source_custom">utm_source (Источник)</Label>
-                 <Controller
-                    name="utm_source_custom"
-                    control={control}
-                    render={({ field }) => (
-                      <Input
-                        id="utm_source_custom"
-                        placeholder="Например: yandex"
-                        {...field}
-                         className="rounded-md shadow-sm"
-                        onChange={(e) => {
-                          field.onChange(e); // Update custom field state
-                          // Clear preset if user types manually
-                          if (watch('utm_source_preset')) {
-                              setValue('utm_source_preset', '');
-                          }
-                        }}
-                      />
-                    )}
-                  />
-              </div>
-               <div>
-                 <Label htmlFor="utm_source_preset">Предустановленные</Label>
-                 <Controller
-                    name="utm_source_preset"
-                    control={control}
-                    render={({ field }) => (
-                      <Select
-                        onValueChange={(value) => {
-                            field.onChange(value); // Update preset field state in RHF
-                            // Set custom field value, clear if value is empty/undefined
-                            setValue('utm_source_custom', value || '');
-                        }}
-                        value={field.value}
-                        >
-                        <SelectTrigger id="utm_source_preset" className="rounded-md shadow-sm">
-                           {/* Use SelectValue with placeholder */}
-                           <SelectValue placeholder="Выберите источник" />
-                        </SelectTrigger>
-                        <SelectContent>
-                           {/* Removed the item with empty value */}
-                          {predefinedSources.map((source) => (
-                            <SelectItem key={source.value} value={source.value}>
-                              {source.label} ({source.value})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-               </div>
-            </div>
-
+             {/* UTM Source */}
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="utm_medium_custom">utm_medium (Канал)</Label>
-                 <Controller
-                    name="utm_medium_custom"
-                    control={control}
-                    render={({ field }) => (
-                      <Input
-                        id="utm_medium_custom"
-                        placeholder="Например: cpc"
-                        {...field}
-                         className="rounded-md shadow-sm"
-                         onChange={(e) => {
-                            field.onChange(e); // Update custom field state
-                            // Clear preset if user types manually
-                            if (watch('utm_medium_preset')) {
-                                setValue('utm_medium_preset', '');
-                            }
-                         }}
-                      />
-                    )}
-                  />
-              </div>
-               <div>
-                 <Label htmlFor="utm_medium_preset">Предустановленные</Label>
-                 <Controller
-                    name="utm_medium_preset"
-                    control={control}
-                    render={({ field }) => (
-                     <Select
-                        onValueChange={(value) => {
-                            field.onChange(value); // Update preset field state in RHF
-                            // Set custom field value, clear if value is empty/undefined
-                            setValue('utm_medium_custom', value || '');
-                        }}
-                        value={field.value}
-                        >
-                        <SelectTrigger id="utm_medium_preset" className="rounded-md shadow-sm">
-                          <SelectValue placeholder="Выберите канал" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {/* Removed the item with empty value */}
-                          {predefinedMediums.map((medium) => (
-                            <SelectItem key={medium.value} value={medium.value}>
-                              {medium.label} ({medium.value})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-               </div>
+                <div>
+                    <Label htmlFor="utm_source_custom">utm_source (Источник) *</Label>
+                    <Controller
+                        name="utm_source_custom"
+                        control={control}
+                        render={({ field }) => (
+                        <Input
+                            id="utm_source_custom"
+                            placeholder="Например: yandex"
+                            {...field}
+                            className="rounded-md shadow-sm"
+                            onChange={(e) => {
+                                field.onChange(e);
+                                // Clear preset if user types manually
+                                if (watch('utm_source_preset')) {
+                                    setValue('utm_source_preset', '');
+                                }
+                                trigger('utm_source_custom'); // Validate on change
+                            }}
+                        />
+                        )}
+                    />
+                    {errors.utm_source_custom && <p className="text-destructive text-sm mt-1">{errors.utm_source_custom.message}</p>}
+                </div>
+                <div>
+                    <Label htmlFor="utm_source_preset">Предустановленные</Label>
+                    <Controller
+                        name="utm_source_preset"
+                        control={control}
+                        render={({ field }) => (
+                        <Select
+                            onValueChange={(value) => {
+                                field.onChange(value);
+                                // setValue('utm_source_custom', value || ''); // Logic moved to useEffect watcher
+                            }}
+                            value={field.value}
+                            >
+                            <SelectTrigger id="utm_source_preset" className="rounded-md shadow-sm">
+                            <SelectValue placeholder="Выберите источник" />
+                            </SelectTrigger>
+                            <SelectContent>
+                            {predefinedSources.map((source) => (
+                                <SelectItem key={source.value} value={source.value}>
+                                {source.label} ({source.value})
+                                </SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        )}
+                    />
+                    {/* Error for preset is less direct, maybe show under custom field or a general form error */}
+                </div>
             </div>
 
+
+           {/* UTM Medium */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <Label htmlFor="utm_medium_custom">utm_medium (Канал) *</Label>
+                    <Controller
+                        name="utm_medium_custom"
+                        control={control}
+                        render={({ field }) => (
+                        <Input
+                            id="utm_medium_custom"
+                            placeholder="Например: cpc"
+                            {...field}
+                            className="rounded-md shadow-sm"
+                            onChange={(e) => {
+                                field.onChange(e);
+                                // Clear preset if user types manually
+                                if (watch('utm_medium_preset')) {
+                                    setValue('utm_medium_preset', '');
+                                }
+                                 trigger('utm_medium_custom'); // Validate on change
+                            }}
+                        />
+                        )}
+                    />
+                     {errors.utm_medium_custom && <p className="text-destructive text-sm mt-1">{errors.utm_medium_custom.message}</p>}
+                </div>
+                <div>
+                    <Label htmlFor="utm_medium_preset">Предустановленные</Label>
+                    <Controller
+                        name="utm_medium_preset"
+                        control={control}
+                        render={({ field }) => (
+                        <Select
+                            onValueChange={(value) => {
+                                field.onChange(value);
+                               // setValue('utm_medium_custom', value || ''); // Logic moved to useEffect watcher
+                            }}
+                            value={field.value}
+                            >
+                            <SelectTrigger id="utm_medium_preset" className="rounded-md shadow-sm">
+                            <SelectValue placeholder="Выберите канал" />
+                            </SelectTrigger>
+                            <SelectContent>
+                            {predefinedMediums.map((medium) => (
+                                <SelectItem key={medium.value} value={medium.value}>
+                                {medium.label} ({medium.value})
+                                </SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        )}
+                    />
+                     {/* Error for preset is less direct */}
+                </div>
+            </div>
+
+            {/* UTM Campaign */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="utm_campaign_name">utm_campaign (Название кампании)</Label>
@@ -270,6 +308,7 @@ export default function GeneratorPage() {
                     />
                   )}
                 />
+                 {errors.utm_campaign_name && <p className="text-destructive text-sm mt-1">{errors.utm_campaign_name.message}</p>}
               </div>
                <div>
                 <Label htmlFor="utm_campaign_date">Дата кампании (Месяц, Год)</Label>
@@ -290,7 +329,7 @@ export default function GeneratorPage() {
                             {field.value ? format(field.value, 'LLLL yyyy', { locale: ru }) : <span>Выберите дату</span>}
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0 rounded-md shadow-lg">
+                        <PopoverContent className="w-auto p-0 rounded-lg shadow-lg"> {/* Use rounded-lg */}
                            <Calendar
                               mode="single"
                               selected={field.value}
@@ -301,20 +340,22 @@ export default function GeneratorPage() {
                               toYear={new Date().getFullYear() + 5}
                               initialFocus
                               classNames={{
-                                  caption_dropdowns: "flex justify-center gap-2", // Ensure dropdowns are visible
+                                  caption_dropdowns: "flex justify-center gap-2",
                                   dropdown_month: "rdp-dropdown_month",
                                   dropdown_year: "rdp-dropdown_year",
-                                  dropdown: "rounded border p-1 bg-background shadow", // Style dropdowns
+                                  dropdown: "rounded border p-1 bg-background shadow",
+                                  root: "rounded-lg" // Ensure calendar itself is rounded
                                 }}
                             />
                         </PopoverContent>
                       </Popover>
                     )}
                   />
+                   {errors.utm_campaign_date && <p className="text-destructive text-sm mt-1">{errors.utm_campaign_date.message}</p>}
               </div>
             </div>
 
-
+            {/* UTM Term */}
              <div>
               <Label htmlFor="utm_term">utm_term (Ключевое слово)</Label>
                <Controller
@@ -324,8 +365,10 @@ export default function GeneratorPage() {
                     <Input id="utm_term" placeholder="Например: buy+book" {...field} className="rounded-md shadow-sm" />
                   )}
                 />
+                 {errors.utm_term && <p className="text-destructive text-sm mt-1">{errors.utm_term.message}</p>}
             </div>
 
+             {/* UTM Content */}
             <div>
               <Label htmlFor="utm_content">utm_content (Содержание)</Label>
                <Controller
@@ -335,6 +378,7 @@ export default function GeneratorPage() {
                    <Input id="utm_content" placeholder="Например: banner_728x90" {...field} className="rounded-md shadow-sm"/>
                   )}
                 />
+                 {errors.utm_content && <p className="text-destructive text-sm mt-1">{errors.utm_content.message}</p>}
             </div>
 
             <Button type="submit" className="w-full md:w-auto rounded-md shadow-md hover:shadow-lg transition-shadow">Сгенерировать</Button>
@@ -342,13 +386,15 @@ export default function GeneratorPage() {
         </CardContent>
       </Card>
 
+       {/* Card for Generated URL Output (conditionally rendered) */}
       {generatedUrl && (
-        <Card className="shadow-md rounded-lg">
+        <Card className="shadow-md rounded-lg"> {/* Use rounded-lg */}
           <CardHeader>
             <CardTitle className="text-xl font-semibold">Сгенерированная ссылка</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col md:flex-row items-start md:items-center gap-4 break-all p-6">
-             <p className="flex-1 text-secondary bg-muted p-3 rounded-md shadow-inner">{generatedUrl}</p>
+             {/* Make the URL text selectable */}
+             <p className="flex-1 text-secondary bg-muted p-3 rounded-md shadow-inner select-all">{generatedUrl}</p>
              <Button variant="outline" size="sm" onClick={copyToClipboard} className="rounded-md shadow-sm hover:shadow transition-shadow">
                 <Copy className="mr-2 h-4 w-4" />
                 Копировать

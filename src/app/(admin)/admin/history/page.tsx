@@ -67,13 +67,13 @@ export default function AdminHistoryPage() {
               <p className="text-muted-foreground">История сгенерированных ссылок пуста.</p>
           ) : (
               history.map((item) => (
-                  <Card key={item.id} className="shadow-sm rounded-lg">
+                  <Card key={item.id} className="shadow-sm rounded-lg"> {/* Use rounded-lg */}
                       <CardContent className="p-4 flex flex-col md:flex-row items-start md:items-center gap-4 break-all">
                           <div className="flex-1">
                               <p className="text-secondary mb-2">{item.url}</p>
                               <div className="flex items-center gap-2 flex-wrap">
                                   {/* Non-clickable date display */}
-                                  <span className="date-display">
+                                  <span className="date-display rounded-md"> {/* Apply rounded-md */}
                                       {format(item.date, 'dd MMMM yyyy', { locale: ru })}
                                   </span>
                                   {/* Copy Button */}

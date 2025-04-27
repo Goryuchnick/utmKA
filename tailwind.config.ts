@@ -62,9 +62,11 @@ export default {
   			}
   		},
   		borderRadius: {
-  			lg: 'var(--radius)',
-  			md: 'calc(var(--radius) - 2px)',
-  			sm: 'calc(var(--radius) - 4px)'
+            // Use the CSS variable defined in globals.css
+            lg: 'var(--radius)',
+            // Define md and sm relative to the variable or as fixed values
+            md: 'calc(var(--radius) - 4px)', // Adjust calculation if needed
+            sm: 'calc(var(--radius) - 8px)', // Adjust calculation if needed
   		},
   		keyframes: {
   			'accordion-down': {

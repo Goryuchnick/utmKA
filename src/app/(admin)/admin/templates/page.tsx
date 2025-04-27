@@ -106,7 +106,7 @@ export default function TemplatesPage() {
             ) : (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {templates.map((template) => (
-                        <Card key={template.id} className="shadow-sm rounded-lg">
+                        <Card key={template.id} className="shadow-sm rounded-lg"> {/* Use rounded-lg */}
                             <CardHeader>
                                 <CardTitle className="text-lg font-semibold">{template.name}</CardTitle>
                                 {/* <CardDescription>Краткое описание шаблона</CardDescription> */}
@@ -136,7 +136,7 @@ export default function TemplatesPage() {
 
             {/* Dialog for Add/Edit Template */}
              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="sm:max-w-[600px] rounded-lg shadow-lg">
+                <DialogContent className="sm:max-w-[600px] rounded-lg shadow-lg"> {/* Use rounded-lg */}
                      <DialogHeader>
                         <DialogTitle>{isEditing ? 'Редактировать шаблон' : 'Добавить новый шаблон'}</DialogTitle>
                         <DialogDescription>
