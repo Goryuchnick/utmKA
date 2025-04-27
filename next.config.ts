@@ -16,6 +16,18 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+       {
+        protocol: 'https',
+        hostname: 'www.google.com',
+        port: '',
+        pathname: '/favicon.ico',
+      },
+      {
+        protocol: 'https',
+        hostname: 'yandex.ru',
+        port: '',
+        pathname: '/favicon.ico',
+      },
     ],
   },
   // If Droid Sans Mono needs specific handling or isn't available via Google Fonts,
