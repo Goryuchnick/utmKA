@@ -2,7 +2,7 @@
 'use client';
 
 import * as React from 'react';
-import { PlusCircle, Edit, Trash2, List, LayoutGrid, Filter, FolderPlus, Folder, Calendar as CalendarIcon, TableIcon } from 'lucide-react'; // Added TableIcon
+import { PlusCircle, Edit, Trash2, List, LayoutGrid, Filter, FolderPlus, Folder, Calendar as CalendarIcon, TableIcon, ArrowUp, ArrowDown } from 'lucide-react'; // Added TableIcon, ArrowUp, ArrowDown
 import { format, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns'; // Date functions
 import { ru } from 'date-fns/locale'; // Russian locale
 import { Button } from '@/components/ui/button';
@@ -66,6 +66,8 @@ const TEMPLATES_VIEW_MODE_STORAGE_KEY = 'utmka_templates_view_mode';
 type ViewMode = 'list' | 'grid' | 'table'; // Added 'table' view mode
 type FilterType = 'all' | 'source' | 'medium' | 'date' | 'group'; // Added 'group' filter type
 type DateFilterRange = 'all' | 'this_month' | 'this_year' | 'custom';
+type SortableColumns = keyof Template | 'groupName'; // Add 'groupName' for sorting by group name
+type SortDirection = 'asc' | 'desc';
 
 export default function TemplatesPage() {
     const { toast } = useToast();
@@ -83,6 +85,8 @@ export default function TemplatesPage() {
     const [customDate, setCustomDate] = React.useState<Date | undefined>(undefined);
     const [isDatePickerOpen, setIsDatePickerOpen] = React.useState(false);
     const [selectedGroupFilter, setSelectedGroupFilter] = React.useState<string>('all'); // Group filter state
+    const [sortColumn, setSortColumn] = React.useState<SortableColumns>('createdAt'); // Default sort by date
+    const [sortDirection, setSortDirection] = React.useState<SortDirection>('desc'); // Default newest first
 
     const isMobile = useIsMobile(); // Get mobile state
 
@@ -205,8 +209,21 @@ export default function TemplatesPage() {
     };
 
 
-    // Filtering Logic
-    const filteredTemplates = React.useMemo(() => {
+    // Sorting Logic
+    const handleSort = (column: SortableColumns) => {
+        if (sortColumn === column) {
+            setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
+        } else {
+            setSortColumn(column);
+            setSortDirection('asc');
+        }
+    };
+
+    const getGroupName = (groupId?: string): string => {
+        return groups.find(g => g.id === groupId)?.name || '';
+    };
+
+    const sortedAndFilteredTemplates = React.useMemo(() => {
         let filtered = templates;
 
         // Filter by Group if the filter type is 'group'
@@ -240,11 +257,37 @@ export default function TemplatesPage() {
             }
         }
 
+        // Sort the filtered data
+        if (sortColumn) {
+            filtered.sort((a, b) => {
+                let aValue: string | number | Date = '';
+                let bValue: string | number | Date = '';
 
-        // Default sort by creation date (newest first)
-        return filtered.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+                if (sortColumn === 'groupName') {
+                    aValue = getGroupName(a.groupId);
+                    bValue = getGroupName(b.groupId);
+                } else if (sortColumn === 'createdAt') {
+                    aValue = a.createdAt;
+                    bValue = b.createdAt;
+                } else {
+                    // Handle Template keys directly
+                    aValue = a[sortColumn as keyof Template] || '';
+                    bValue = b[sortColumn as keyof Template] || '';
+                }
 
-    }, [templates, filterType, filterValue, dateFilterRange, customDate, selectedGroupFilter]);
+                // Comparison logic
+                if (aValue < bValue) {
+                    return sortDirection === 'asc' ? -1 : 1;
+                }
+                if (aValue > bValue) {
+                    return sortDirection === 'asc' ? 1 : -1;
+                }
+                return 0;
+            });
+        }
+
+        return filtered;
+    }, [templates, groups, filterType, filterValue, dateFilterRange, customDate, selectedGroupFilter, sortColumn, sortDirection]);
 
 
     const renderTemplateCard = (template: Template) => (
@@ -253,7 +296,7 @@ export default function TemplatesPage() {
             {template.groupId && (
                  <div className="text-xs text-muted-foreground px-4 pt-2 flex items-center">
                      <Folder size={12} className="mr-1" />
-                     {groups.find(g => g.id === template.groupId)?.name || 'Без группы'}
+                     {getGroupName(template.groupId) || 'Без группы'}
                  </div>
              )}
             <CardHeader className={cn("pb-2", template.groupId ? "pt-1" : "")}> {/* Adjust padding if group name is shown */}
@@ -289,7 +332,7 @@ export default function TemplatesPage() {
                      {template.groupId && (
                          <div className="text-xs text-muted-foreground mt-1 flex items-center">
                               <Folder size={12} className="mr-1" />
-                             {groups.find(g => g.id === template.groupId)?.name || 'Без группы'}
+                             {getGroupName(template.groupId) || 'Без группы'}
                          </div>
                      )}
                     <div className="text-sm space-x-4 mt-1">
@@ -320,7 +363,7 @@ export default function TemplatesPage() {
             <TableCell className="font-medium">{template.name}</TableCell>
             <TableCell>{template.utm_source || '-'}</TableCell>
             <TableCell>{template.utm_medium || '-'}</TableCell>
-            <TableCell>{groups.find(g => g.id === template.groupId)?.name || 'Без группы'}</TableCell>
+            <TableCell>{getGroupName(template.groupId) || 'Без группы'}</TableCell>
             <TableCell>{format(template.createdAt, 'dd MMM yyyy', { locale: ru })}</TableCell>
             <TableCell className="text-right">
                  <div className="flex justify-end gap-2">
@@ -335,6 +378,21 @@ export default function TemplatesPage() {
                 </div>
             </TableCell>
         </TableRow>
+    );
+
+    // Helper component for sortable table headers
+    const SortableTableHead = ({ column, label }: { column: SortableColumns, label: string }) => (
+        <TableHead
+            className="cursor-pointer hover:bg-muted/50 transition-colors"
+            onClick={() => handleSort(column)}
+        >
+            <div className="flex items-center gap-1">
+                {label}
+                {sortColumn === column && (
+                    sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                )}
+            </div>
+        </TableHead>
     );
 
 
@@ -469,7 +527,7 @@ export default function TemplatesPage() {
             </div>
 
 
-            {filteredTemplates.length === 0 ? (
+            {sortedAndFilteredTemplates.length === 0 ? (
                 <p className="text-muted-foreground text-center mt-4">
                     {templates.length === 0 ? "У вас пока нет сохраненных шаблонов." : "Шаблоны, соответствующие фильтру, не найдены."}
                 </p>
@@ -477,29 +535,29 @@ export default function TemplatesPage() {
                 viewMode === 'grid' ? (
                     // Grid View
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                        {filteredTemplates.map(renderTemplateCard)}
+                        {sortedAndFilteredTemplates.map(renderTemplateCard)}
                     </div>
                 ) : viewMode === 'list' ? (
                     // List View
                     <div className="space-y-4">
-                        {filteredTemplates.map(renderTemplateListItem)}
+                        {sortedAndFilteredTemplates.map(renderTemplateListItem)}
                     </div>
                 ) : (
                    // Table View
-                    <Card className="shadow-sm rounded-lg bg-card">
+                    <Card className="shadow-sm rounded-lg bg-card overflow-hidden"> {/* Added overflow-hidden */}
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Название</TableHead>
-                                    <TableHead>Источник</TableHead>
-                                    <TableHead>Канал</TableHead>
-                                    <TableHead>Группа</TableHead>
-                                    <TableHead>Дата</TableHead>
+                                    <SortableTableHead column="name" label="Название" />
+                                    <SortableTableHead column="utm_source" label="Источник" />
+                                    <SortableTableHead column="utm_medium" label="Канал" />
+                                    <SortableTableHead column="groupName" label="Группа" />
+                                    <SortableTableHead column="createdAt" label="Дата" />
                                     <TableHead className="text-right">Действия</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {filteredTemplates.map(renderTemplateTableRow)}
+                                {sortedAndFilteredTemplates.map(renderTemplateTableRow)}
                             </TableBody>
                         </Table>
                     </Card>
