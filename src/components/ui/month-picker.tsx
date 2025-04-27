@@ -4,7 +4,7 @@
 import * as React from "react"
 import { format, addMonths, subMonths, setMonth, setYear, getYear, getMonth } from "date-fns"
 import { ru } from 'date-fns/locale'; // Import Russian locale
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, CalendarCheck } from "lucide-react" // Added CalendarCheck icon
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -71,6 +71,14 @@ const MonthPicker = ({
       }
   };
 
+  const handleTodayClick = () => {
+    const today = new Date();
+    setSelectedDate(today);
+    setCurrentYear(getYear(today));
+    onSelect?.(today);
+  };
+
+
   const years = Array.from({ length: toYear - fromYear + 1 }, (_, i) => fromYear + i);
   const months = Array.from({ length: 12 }, (_, i) => i);
 
@@ -108,7 +116,7 @@ const MonthPicker = ({
           <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 gap-2 mb-4"> {/* Added mb-4 */}
         {months.map((monthIndex) => {
           const monthDate = setMonth(setYear(new Date(), currentYear), monthIndex);
           const isSelected = selectedDate && getYear(selectedDate) === currentYear && getMonth(selectedDate) === monthIndex;
@@ -118,7 +126,7 @@ const MonthPicker = ({
               variant={isSelected ? "default" : "ghost"} // Use default variant for selected
               size="sm"
               className={cn(
-                  "rounded-md w-full justify-center", // Apply rounded-md
+                  "rounded-md w-full justify-center font-medium", // Added font-medium
                   isSelected ? "bg-primary text-primary-foreground hover:bg-primary/90" : "hover:bg-accent hover:text-accent-foreground"
               )}
               onClick={() => handleMonthClick(monthIndex)}
@@ -128,6 +136,17 @@ const MonthPicker = ({
           );
         })}
       </div>
+       {/* Today Button */}
+       <div className="flex justify-center">
+           <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleTodayClick}
+                className="rounded-md text-primary hover:bg-accent hover:text-primary/80 w-full" // Make button full width
+            >
+                <CalendarCheck className="mr-2 h-4 w-4" /> Сегодня
+            </Button>
+        </div>
     </div>
   );
 };
@@ -135,5 +154,3 @@ const MonthPicker = ({
 MonthPicker.displayName = "MonthPicker";
 
 export { MonthPicker };
-
-    
