@@ -1,4 +1,5 @@
 
+
 "use client"
 
 import * as React from "react"
@@ -26,6 +27,22 @@ const SelectValue = React.forwardRef<
     </SelectPrimitive.Value>
 ));
 SelectValue.displayName = SelectPrimitive.Value.displayName
+
+// Custom Overlay for Select dropdowns
+const SelectOverlay = React.forwardRef<
+  React.ElementRef<typeof SelectPrimitive.Overlay>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Overlay>
+>(({ className, ...props }, ref) => (
+  <SelectPrimitive.Overlay
+    className={cn(
+      "fixed inset-0 z-40 bg-black/60 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0", // z-40 to be behind content, apply blur/dim
+      className
+    )}
+    {...props}
+    ref={ref}
+  />
+));
+SelectOverlay.displayName = 'SelectOverlay';
 
 
 const SelectTrigger = React.forwardRef<
@@ -92,6 +109,7 @@ const SelectContent = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
 >(({ className, children, position = "popper", sideOffset = 4, ...props }, ref) => (
   <SelectPrimitive.Portal>
+    <SelectOverlay /> {/* Add the overlay */}
     <SelectPrimitive.Content
       ref={ref}
       className={cn(
@@ -137,10 +155,14 @@ const SelectItem = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item> & { value: string } // Ensure value is always a string
 >(({ className, children, value, ...props }, ref) => { // Accept value prop
    // Enforce non-empty string value for SelectItem as required by Radix UI
-   if (value === '') {
-      console.warn('A <Select.Item /> received an empty string value prop. Using a placeholder value "__placeholder__" instead. Ensure all items have unique, non-empty values.');
+   if (value === undefined || value === null) {
+      console.warn('A <Select.Item /> received a null or undefined value prop. Using a placeholder value "__placeholder__" instead. Ensure all items have unique, non-empty string values.');
+      value = "__placeholder__"; // Use a placeholder value
+   } else if (value === '') {
+      console.warn('A <Select.Item /> received an empty string value prop. Using a placeholder value "__placeholder__" instead. Ensure all items have unique, non-empty string values.');
       value = "__placeholder__"; // Use a placeholder value if an empty string is passed
    }
+
 
    return (
    <SelectPrimitive.Item

@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -9,11 +10,29 @@ const Popover = PopoverPrimitive.Root
 
 const PopoverTrigger = PopoverPrimitive.Trigger
 
+// Custom Overlay for Popovers
+const PopoverOverlay = React.forwardRef<
+  React.ElementRef<typeof PopoverPrimitive.Overlay>,
+  React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Overlay>
+>(({ className, ...props }, ref) => (
+  <PopoverPrimitive.Overlay
+    className={cn(
+      "fixed inset-0 z-40 bg-black/60 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0", // z-40 to be behind content, apply blur/dim
+      className
+    )}
+    {...props}
+    ref={ref}
+  />
+));
+PopoverOverlay.displayName = 'PopoverOverlay';
+
+
 const PopoverContent = React.forwardRef<
   React.ElementRef<typeof PopoverPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Content>
 >(({ className, align = "center", sideOffset = 4, ...props }, ref) => (
   <PopoverPrimitive.Portal>
+    <PopoverOverlay /> {/* Add the overlay */}
     <PopoverPrimitive.Content
       ref={ref}
       align={align}
@@ -29,3 +48,4 @@ const PopoverContent = React.forwardRef<
 PopoverContent.displayName = PopoverPrimitive.Content.displayName
 
 export { Popover, PopoverTrigger, PopoverContent }
+
