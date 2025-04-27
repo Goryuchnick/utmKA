@@ -29,7 +29,8 @@ const SelectTrigger = React.forwardRef<
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      "flex h-10 w-full items-center justify-between rounded-md border border-input bg-input px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 shadow-sm", // Use rounded-md, bg-input, add shadow-sm
+      // "flex h-10 w-full items-center justify-between rounded-md border border-input bg-input px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 shadow-sm", // Original shadow-sm, ring-2
+      "flex h-10 w-full items-center justify-between rounded-md border border-input bg-input px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 shadow-md", // Use rounded-md, bg-input, add shadow-md, ring-1, ring-offset-1
       className
     )}
     {...props}
@@ -124,12 +125,11 @@ SelectLabel.displayName = SelectPrimitive.Label.displayName
 
 const SelectItem = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Item>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
-// Remove explicit value prop validation as it causes runtime errors. Radix handles this internally.
->(({ className, children, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item> & { value: string } // Ensure value is always a string
+>(({ className, children, value, ...props }, ref) => ( // Accept value prop
    <SelectPrimitive.Item
     ref={ref}
-    // Ensure value prop is passed correctly from usage
+    value={value} // Pass value prop down
     {...props}
     className={cn(
       "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50", // Keep rounded-sm for items
@@ -171,3 +171,5 @@ export {
   SelectScrollUpButton,
   SelectScrollDownButton,
 }
+
+    

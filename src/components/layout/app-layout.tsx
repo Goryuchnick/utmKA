@@ -136,7 +136,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider defaultOpen={!isMobile} >
-       <Sidebar collapsible="icon" variant="sidebar" side="left" className="border-none"> {/* Remove sidebar border if desired */}
+       {/* Use 'sidebar' variant for Metrika-like styling, remove default border */}
+       <Sidebar collapsible="icon" variant="sidebar" side="left" className="border-r border-sidebar-border">
            <SidebarHeader className="items-center gap-2 border-b border-sidebar-border p-3 group-data-[collapsible=icon]:justify-center">
                 <Link href="/generator" className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
                     {/* Consider adding your logo/icon here */}
@@ -145,6 +146,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                  </Link>
                 <SidebarTrigger className="ml-auto group-data-[collapsible=icon]:ml-0" />
            </SidebarHeader>
+           {/* Adjust padding to match Metrika style */}
            <SidebarContent className="flex-1 overflow-y-auto p-2">
                 <SidebarMenu>
                     {/* Public Items */}
@@ -154,7 +156,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                                 asChild
                                 isActive={pathname.startsWith(item.href)}
                                 tooltip={{ children: item.label}}
-                                className="rounded-lg" // Apply rounded-lg to buttons
+                                className="rounded-md" // Use rounded-md for buttons
                              >
                                 <Link href={item.href}>
                                      <item.icon />
@@ -171,7 +173,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                                 asChild
                                 isActive={pathname.startsWith(item.href)}
                                 tooltip={{ children: item.label}}
-                                className="rounded-lg" // Apply rounded-lg to buttons
+                                className="rounded-md" // Use rounded-md for buttons
                              >
                                 <Link href={item.href}>
                                      <item.icon />
@@ -191,7 +193,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                                 asChild
                                 isActive={pathname.startsWith(item.href)}
                                 tooltip={{ children: item.label}}
-                                className="rounded-lg" // Apply rounded-lg to buttons
+                                className="rounded-md" // Use rounded-md for buttons
                             >
                                 <Link href={item.href}>
                                     <item.icon />
@@ -209,7 +211,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                                     asChild
                                     isActive={pathname === accountNavItem.href}
                                     tooltip={{ children: accountNavItem.label}}
-                                    className="rounded-lg" // Apply rounded-lg to buttons
+                                    className="rounded-md" // Use rounded-md for buttons
                                 >
                                      <Link href={accountNavItem.href}>
                                         <accountNavItem.icon />
@@ -218,7 +220,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
                             <SidebarMenuItem>
-                                 <SidebarMenuButton onClick={handleLogout} tooltip={{ children: 'Выйти'}} className="rounded-lg"> {/* Apply rounded-lg to buttons */}
+                                 <SidebarMenuButton onClick={handleLogout} tooltip={{ children: 'Выйти'}} className="rounded-md"> {/* Use rounded-md for buttons */}
                                      <LogOut />
                                      <span>Выйти</span>
                                  </SidebarMenuButton>
@@ -228,8 +230,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </SidebarMenu>
            </SidebarFooter>
        </Sidebar>
-        {/* Apply rounded-lg to the main content area */}
-        <SidebarInset className="rounded-lg">
+        {/* Remove rounded-lg from SidebarInset if using 'sidebar' variant to avoid double rounding/border */}
+        <SidebarInset>
             <main className="flex-1 container mx-auto p-4 md:p-8">
                  <h1 className="text-3xl font-bold mb-6 text-primary">
                      {currentPageTitle}
@@ -240,3 +242,5 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     </SidebarProvider>
   );
 }
+
+    
