@@ -216,7 +216,7 @@ export default function GeneratorPage() {
   return (
     <div className="space-y-8">
       {/* Card for Form Inputs */}
-      <Card className="shadow-md rounded-lg bg-card"> {/* Ensure card background is white */}
+      <Card className="shadow-md rounded-lg bg-card">
         <CardContent className="p-6">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {/* Base URL */}
@@ -244,11 +244,10 @@ export default function GeneratorPage() {
                             id="utm_source_custom"
                             placeholder="Например: yandex"
                             {...field}
-                            className="rounded-md font-medium shadow-md" // Added font-medium and shadow
+                            className="rounded-md font-medium shadow-md"
                             onChange={(e) => {
                                 field.onChange(e);
-                                // Logic to clear/sync preset moved to useEffect watcher
-                                trigger('utm_source_custom'); // Trigger validation after custom input changes
+                                trigger('utm_source_custom');
                             }}
                         />
                         )}
@@ -271,16 +270,14 @@ export default function GeneratorPage() {
                         <Select
                              onValueChange={(value) => {
                                 field.onChange(value);
-                                // Logic to set custom field and trigger validation is in useEffect watcher
                             }}
-                            value={field.value || ''} // Ensure value is controlled and defaults to empty string
+                            value={field.value || ''}
                             >
-                            <SelectTrigger id="utm_source_preset" className="rounded-md bg-input text-primary shadow-md font-medium"> {/* Match date picker style */}
-                                <SelectValue placeholder={<span className="text-muted-foreground">Выберите источник</span>} /> {/* Styled placeholder */}
+                            <SelectTrigger id="utm_source_preset" className="rounded-md bg-input text-primary shadow-md font-medium">
+                                <SelectValue placeholder={<span className="text-muted-foreground">Выберите источник</span>} />
                             </SelectTrigger>
-                            <SelectContent className="rounded-lg"> {/* Use rounded-lg */}
-                            {/* Add an explicit "Clear" or "None" option if desired */}
-                             <SelectItem value="" disabled hidden>Выберите источник</SelectItem> {/* Hidden placeholder item */}
+                            <SelectContent className="rounded-lg">
+                            {/* Removed SelectItem with empty value */}
                             {predefinedSources.map((source) => (
                                 <SelectItem key={source.value} value={source.value}>
                                 {source.label} ({source.value})
@@ -290,7 +287,6 @@ export default function GeneratorPage() {
                         </Select>
                         )}
                     />
-                    {/* Error display might be less direct, possibly rely on the main field's error */}
                 </div>
             </div>
 
@@ -307,16 +303,14 @@ export default function GeneratorPage() {
                             id="utm_medium_custom"
                             placeholder="Например: cpc"
                             {...field}
-                            className="rounded-md font-medium shadow-md" // Added font-medium and shadow
+                            className="rounded-md font-medium shadow-md"
                             onChange={(e) => {
                                 field.onChange(e);
-                                // Logic to clear/sync preset moved to useEffect watcher
-                                trigger('utm_medium_custom'); // Validate on change if needed
+                                trigger('utm_medium_custom');
                             }}
                         />
                         )}
                     />
-                     {/* Optional field: No error display needed unless specific validation rules apply */}
                 </div>
                 <div>
                     <Label htmlFor="utm_medium_preset">Предустановленные</Label>
@@ -327,15 +321,14 @@ export default function GeneratorPage() {
                         <Select
                            onValueChange={(value) => {
                                 field.onChange(value);
-                                // Logic to set custom field is in useEffect watcher
                             }}
-                            value={field.value || ''} // Ensure value is controlled and defaults to empty string
+                            value={field.value || ''}
                             >
-                            <SelectTrigger id="utm_medium_preset" className="rounded-md bg-input text-primary shadow-md font-medium"> {/* Match date picker style */}
-                                <SelectValue placeholder={<span className="text-muted-foreground">Выберите канал</span>} /> {/* Styled placeholder */}
+                            <SelectTrigger id="utm_medium_preset" className="rounded-md bg-input text-primary shadow-md font-medium">
+                                <SelectValue placeholder={<span className="text-muted-foreground">Выберите канал</span>} />
                             </SelectTrigger>
-                            <SelectContent className="rounded-lg"> {/* Use rounded-lg */}
-                             <SelectItem value="" disabled hidden>Выберите канал</SelectItem> {/* Hidden placeholder item */}
+                            <SelectContent className="rounded-lg">
+                            {/* Removed SelectItem with empty value */}
                             {predefinedMediums.map((medium) => (
                                 <SelectItem key={medium.value} value={medium.value}>
                                 {medium.label} ({medium.value})
@@ -345,7 +338,6 @@ export default function GeneratorPage() {
                         </Select>
                         )}
                     />
-                     {/* Optional field: No error display needed */}
                 </div>
             </div>
 
@@ -361,11 +353,10 @@ export default function GeneratorPage() {
                       id="utm_campaign_name"
                       placeholder="Например: summer_sale"
                       {...field}
-                      className="rounded-md font-medium shadow-md" // Added font-medium and shadow
+                      className="rounded-md font-medium shadow-md"
                     />
                   )}
                 />
-                 {/* Optional field: No error display needed */}
               </div>
                <div>
                 <Label htmlFor="utm_campaign_date">Дата кампании (Месяц, Год)</Label>
@@ -378,25 +369,24 @@ export default function GeneratorPage() {
                            <Button
                                 variant={'outline'}
                                 className={cn(
-                                'w-full justify-start text-left font-normal rounded-md shadow-md bg-input text-primary font-medium', // Apply input styles, font-medium
-                                !field.value && 'text-muted-foreground' // Keep placeholder style
+                                'w-full justify-start text-left font-normal rounded-md shadow-md bg-input text-primary font-medium',
+                                !field.value && 'text-muted-foreground'
                                 )}
                             >
-                                <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" /> {/* Icon color */}
+                                <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
                                 {field.value ? format(field.value, 'LLLL yyyy', { locale: ru }) : <span className="text-muted-foreground">Выберите дату</span>}
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0 rounded-lg shadow-lg" align="start">
                             <MonthPicker
                               selected={field.value}
-                              onSelect={(date) => handleDateSelect(date, field.onChange)} // Use handler to close popover
+                              onSelect={(date) => handleDateSelect(date, field.onChange)}
                               locale={ru}
                             />
                         </PopoverContent>
                       </Popover>
                     )}
                   />
-                   {/* Optional field: No error display needed */}
               </div>
             </div>
 
@@ -407,10 +397,9 @@ export default function GeneratorPage() {
                   name="utm_term"
                   control={control}
                   render={({ field }) => (
-                    <Input id="utm_term" placeholder="Например: buy+book" {...field} className="rounded-md font-medium shadow-md" /> // Added font-medium and shadow
+                    <Input id="utm_term" placeholder="Например: buy+book" {...field} className="rounded-md font-medium shadow-md" />
                   )}
                 />
-                 {/* Optional field: No error display needed */}
             </div>
 
              {/* UTM Content */}
@@ -420,10 +409,9 @@ export default function GeneratorPage() {
                   name="utm_content"
                   control={control}
                   render={({ field }) => (
-                   <Input id="utm_content" placeholder="Например: banner_728x90" {...field} className="rounded-md font-medium shadow-md"/> // Added font-medium and shadow
+                   <Input id="utm_content" placeholder="Например: banner_728x90" {...field} className="rounded-md font-medium shadow-md"/>
                   )}
                 />
-                 {/* Optional field: No error display needed */}
             </div>
 
             <Button type="submit" className="w-full md:w-auto rounded-md shadow-md hover:shadow-lg transition-shadow">Сгенерировать</Button>
@@ -433,14 +421,14 @@ export default function GeneratorPage() {
 
        {/* Card for Generated URL Output (conditionally rendered) */}
       {generatedUrl && (
-        <Card className="shadow-md rounded-lg bg-card"> {/* Ensure card background is white */}
+        <Card className="shadow-md rounded-lg bg-card">
           <CardHeader>
             <CardTitle className="text-xl font-semibold text-primary">Сгенерированная ссылка</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col md:flex-row items-start md:items-center gap-4 break-all p-6">
              {/* Make the URL text selectable */}
              <p className="flex-1 text-primary bg-muted p-3 rounded-md shadow-inner select-all">{generatedUrl}</p>
-             <Button variant="default" size="sm" onClick={copyToClipboard} className="rounded-md shadow-sm hover:shadow transition-shadow"> {/* Button style consistent with Generate */}
+             <Button variant="default" size="sm" onClick={copyToClipboard} className="rounded-md shadow-md hover:shadow-lg transition-shadow">
                 <Copy className="mr-2 h-4 w-4" />
                 Копировать
              </Button>
@@ -450,7 +438,3 @@ export default function GeneratorPage() {
     </div>
   );
 }
-
-    
-
-    
