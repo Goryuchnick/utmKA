@@ -262,10 +262,10 @@ export default function GeneratorPage() {
               setValue('utm_source_custom', selectedTemplate.utm_source, { shouldValidate: true });
               // Check if the template source exists in predefined values to update the select
               const sourcePresetExists = predefinedSources.some(p => p.value === selectedTemplate.utm_source);
-              setValue('utm_source_preset', sourcePresetExists ? selectedTemplate.utm_source : '');
+              setValue('utm_source_preset', sourcePresetExists ? selectedTemplate.utm_source : '__placeholder__'); // Use placeholder if not found
           } else {
               setValue('utm_source_custom', '', { shouldValidate: true });
-              setValue('utm_source_preset', '');
+              setValue('utm_source_preset', '__placeholder__');
           }
 
           // Update medium field
@@ -273,10 +273,10 @@ export default function GeneratorPage() {
               setValue('utm_medium_custom', selectedTemplate.utm_medium, { shouldValidate: true });
                // Check if the template medium exists in predefined values to update the select
               const mediumPresetExists = predefinedMediums.some(p => p.value === selectedTemplate.utm_medium);
-              setValue('utm_medium_preset', mediumPresetExists ? selectedTemplate.utm_medium : '');
+              setValue('utm_medium_preset', mediumPresetExists ? selectedTemplate.utm_medium : '__placeholder__'); // Use placeholder if not found
           } else {
               setValue('utm_medium_custom', '', { shouldValidate: true });
-              setValue('utm_medium_preset', '');
+              setValue('utm_medium_preset', '__placeholder__');
           }
 
           toast({
@@ -296,7 +296,7 @@ export default function GeneratorPage() {
             } else if (name === 'utm_source_custom' && value.utm_source_custom !== watch('utm_source_preset')) {
                  // Check if the custom value matches any predefined value
                 const presetValue = predefinedSources.find(p => p.value === value.utm_source_custom)?.value || '';
-                setValue('utm_source_preset', presetValue || ''); // Update select or set to placeholder
+                setValue('utm_source_preset', presetValue || '__placeholder__'); // Update select or set to placeholder
                 trigger('utm_source_custom'); // Validate custom field
             }
 
@@ -306,7 +306,7 @@ export default function GeneratorPage() {
             } else if (name === 'utm_medium_custom' && value.utm_medium_custom !== watch('utm_medium_preset')) {
                  // Check if the custom value matches any predefined value
                 const presetValue = predefinedMediums.find(p => p.value === value.utm_medium_custom)?.value || '';
-                setValue('utm_medium_preset', presetValue || ''); // Update select or set to placeholder
+                setValue('utm_medium_preset', presetValue || '__placeholder__'); // Update select or set to placeholder
                  trigger('utm_medium_custom'); // Validate if needed
             }
         });
@@ -440,7 +440,7 @@ export default function GeneratorPage() {
                                     <SelectContent className="rounded-lg">
                                         {/* Add placeholder item */}
                                          <SelectItem value="__placeholder__" disabled>Выберите источник</SelectItem>
-                                        {predefinedSources.map((source) => (
+                                        {isAuthenticated && predefinedSources.map((source) => ( // Conditionally render items
                                             <SelectItem key={source.value} value={source.value}>
                                             {source.label} ({source.value})
                                             </SelectItem>
@@ -495,7 +495,7 @@ export default function GeneratorPage() {
                                         <SelectContent className="rounded-lg">
                                              {/* Add placeholder item */}
                                              <SelectItem value="__placeholder__" disabled>Выберите источник</SelectItem>
-                                            {predefinedSources.map((source) => (
+                                            {isAuthenticated && predefinedSources.map((source) => ( // Conditionally render items
                                                 <SelectItem key={source.value} value={source.value}>
                                                 {source.label} ({source.value})
                                                 </SelectItem>
@@ -550,8 +550,8 @@ export default function GeneratorPage() {
                                      <SelectTrigger
                                         id="utm_medium_preset_mobile"
                                         className={cn(
-                                            "!h-10 !w-[170px] !border-none !border-l !border-input !shadow-none !ring-0 focus:!ring-0 rounded-none bg-muted text-primary font-medium px-3", // Set fixed width, primary text color
-                                            (!field.value || field.value === '__placeholder__') && 'text-muted-foreground',
+                                            "!h-10 !w-[170px] !border-none !border-l !border-input !shadow-none !ring-0 focus:!ring-0 rounded-none bg-muted text-primary font-medium px-3", // Use text-primary directly
+                                            (!field.value || field.value === '__placeholder__') && 'text-muted-foreground', // Keep placeholder muted
                                             !isAuthenticated && 'cursor-not-allowed opacity-50'
                                         )}
                                         aria-label="Предустановленные каналы"
@@ -567,7 +567,7 @@ export default function GeneratorPage() {
                                     <SelectContent className="rounded-lg">
                                          {/* Add placeholder item */}
                                         <SelectItem value="__placeholder__" disabled>Выберите канал</SelectItem>
-                                        {predefinedMediums.map((medium) => (
+                                        {isAuthenticated && predefinedMediums.map((medium) => ( // Conditionally render items
                                             <SelectItem key={medium.value} value={medium.value}>
                                             {medium.label} ({medium.value})
                                             </SelectItem>
@@ -622,7 +622,7 @@ export default function GeneratorPage() {
                                         <SelectContent className="rounded-lg">
                                              {/* Add placeholder item */}
                                             <SelectItem value="__placeholder__" disabled>Выберите канал</SelectItem>
-                                            {predefinedMediums.map((medium) => (
+                                            {isAuthenticated && predefinedMediums.map((medium) => ( // Conditionally render items
                                                 <SelectItem key={medium.value} value={medium.value}>
                                                 {medium.label} ({medium.value})
                                                 </SelectItem>
@@ -666,7 +666,7 @@ export default function GeneratorPage() {
                                     <Button
                                         variant={'ghost'} // Use ghost variant for seamless look
                                         className={cn(
-                                            "!h-10 !w-[170px] !border-none !border-l !border-input !shadow-none !ring-0 focus:!ring-0 rounded-none bg-muted text-primary font-medium px-3 justify-between", // Set fixed width, primary text color, space between text/icon
+                                            "!h-10 !w-[170px] !border-none !border-l !border-input !shadow-none !ring-0 focus:!ring-0 rounded-none bg-muted text-primary font-medium px-3 justify-between", // Use text-primary directly
                                             !field.value && 'text-muted-foreground' // Muted placeholder text
                                         )}
                                         aria-label="Выберите дату кампании"
@@ -805,3 +805,4 @@ export default function GeneratorPage() {
   );
 }
 
+    
