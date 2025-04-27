@@ -308,7 +308,8 @@ export default function AdminHistoryPage() {
                       <Card className="shadow-sm rounded-lg bg-card overflow-hidden">
                           {/* Wrapper div for horizontal scrolling on mobile */}
                           <div className="w-full overflow-x-auto">
-                              <Table className="min-w-max"> {/* Ensure table takes minimum width needed */}
+                              {/* Remove whitespace around the Table component */}
+                              <Table className="min-w-max">{/* Ensure table takes minimum width needed */}
                                   <TableHeader>
                                       <TableRow>
                                           <TableHead>Сгенерированная ссылка</TableHead>
