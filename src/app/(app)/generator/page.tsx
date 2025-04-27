@@ -178,7 +178,8 @@ export default function GeneratorPage() {
                       <Select
                         onValueChange={(value) => {
                             field.onChange(value); // Update preset field state in RHF
-                            setValue('utm_source_custom', value); // Set custom field value
+                            // Set custom field value, clear if value is empty/undefined
+                            setValue('utm_source_custom', value || '');
                         }}
                         value={field.value}
                         >
@@ -187,8 +188,7 @@ export default function GeneratorPage() {
                            <SelectValue placeholder="Выберите источник" />
                         </SelectTrigger>
                         <SelectContent>
-                           {/* Add an option to clear the selection */}
-                           <SelectItem value="">-- Не выбрано --</SelectItem>
+                           {/* Removed the item with empty value */}
                           {predefinedSources.map((source) => (
                             <SelectItem key={source.value} value={source.value}>
                               {source.label} ({source.value})
@@ -233,7 +233,8 @@ export default function GeneratorPage() {
                      <Select
                         onValueChange={(value) => {
                             field.onChange(value); // Update preset field state in RHF
-                            setValue('utm_medium_custom', value); // Set custom field value
+                            // Set custom field value, clear if value is empty/undefined
+                            setValue('utm_medium_custom', value || '');
                         }}
                         value={field.value}
                         >
@@ -241,7 +242,7 @@ export default function GeneratorPage() {
                           <SelectValue placeholder="Выберите канал" />
                         </SelectTrigger>
                         <SelectContent>
-                           <SelectItem value="">-- Не выбрано --</SelectItem>
+                            {/* Removed the item with empty value */}
                           {predefinedMediums.map((medium) => (
                             <SelectItem key={medium.value} value={medium.value}>
                               {medium.label} ({medium.value})
