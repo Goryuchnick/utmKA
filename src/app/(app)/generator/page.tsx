@@ -32,6 +32,8 @@ import { translateMonth } from '@/services/date-formatter';
 import { MonthPicker } from '@/components/ui/month-picker';
 import { useAuth } from '@/hooks/use-auth'; // Import useAuth
 import type { HistoryItem } from '@/types/history-item'; // Import shared type
+import { useIsMobile } from '@/hooks/use-mobile'; // Import useIsMobile hook
+
 
 // Updated form schema: only baseUrl and utm_source are required
 const formSchema = z.object({
@@ -44,6 +46,7 @@ const formSchema = z.object({
   utm_campaign_date: z.date().optional(),
   utm_term: z.string().optional(),
   utm_content: z.string().optional(),
+  template_select: z.string().optional(), // Added dummy field for template selector control
 }).refine(data => !!data.utm_source_custom || !!data.utm_source_preset, { // Ensure at least one source is provided
     message: "Источник (utm_source) должен быть указан.",
     path: ["utm_source_custom"], // Path for the primary source field where the error appears
@@ -91,6 +94,7 @@ export default function GeneratorPage() {
   const [isDatePopoverOpen, setIsDatePopoverOpen] = React.useState(false); // State to control date picker popover
   const { isAuthenticated, isLoading } = useAuth(); // Get auth state
   const [templates, setTemplates] = React.useState<Template[]>([]); // State to hold templates
+  const isMobile = useIsMobile(); // Get mobile state
 
   // TODO: Replace mock data fetching with actual API call based on user ID
   React.useEffect(() => {
@@ -120,6 +124,7 @@ export default function GeneratorPage() {
       utm_campaign_name: '',
       utm_term: '',
       utm_content: '',
+      template_select: '', // Initialize template select dummy field
     },
   });
 
@@ -202,32 +207,37 @@ export default function GeneratorPage() {
     const finalUrl = url.toString();
     setGeneratedUrl(finalUrl);
 
-    // Save the generated URL to history if authenticated
-    if (isAuthenticated) {
-        try {
-            const currentHistoryString = localStorage.getItem(HISTORY_STORAGE_KEY);
-            const currentHistory: HistoryItem[] = currentHistoryString ? JSON.parse(currentHistoryString) : [];
+    // Save the generated URL to history (for both logged in and guest users)
+    try {
+        const currentHistoryString = localStorage.getItem(HISTORY_STORAGE_KEY);
+        const currentHistory: HistoryItem[] = currentHistoryString ? JSON.parse(currentHistoryString) : [];
 
-            const newHistoryItem: HistoryItem = {
-                id: Date.now().toString(), // Simple unique ID
-                url: finalUrl,
-                date: new Date().toISOString(), // Store date as ISO string
-            };
+        // Convert stored dates back to Date objects for comparison/sorting if needed, though ISO strings are fine for storage
+        const currentHistoryDates = currentHistory.map(item => ({ ...item, date: new Date(item.date) }));
 
-            // Add new item and save back to localStorage
-            const updatedHistory = [newHistoryItem, ...currentHistory]; // Add to the beginning
-            localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updatedHistory));
+        const newHistoryItem: HistoryItem = {
+            id: Date.now().toString(), // Simple unique ID
+            url: finalUrl,
+            date: new Date().toISOString(), // Store date as ISO string
+        };
 
-             console.log('Saving to history for logged-in user:', finalUrl); // Placeholder
+        // Add new item and save back to localStorage
+        const updatedHistory = [newHistoryItem, ...currentHistoryDates]; // Add to the beginning
+        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updatedHistory.map(item => ({ ...item, date: item.date.toISOString() })))); // Save dates as ISO strings
 
-        } catch (error) {
-             console.error("Error saving history to localStorage:", error);
-             toast({
-                 title: "Ошибка",
-                 description: "Не удалось сохранить ссылку в историю.",
-                 variant: "destructive",
-             });
-        }
+        // If authenticated, you might also sync this with a backend database here
+        // if (isAuthenticated) {
+        //     // TODO: Add API call to save history to backend
+        //     console.log('Saving to backend history for logged-in user:', finalUrl);
+        // }
+
+    } catch (error) {
+         console.error("Error saving history to localStorage:", error);
+         toast({
+             title: "Ошибка",
+             description: "Не удалось сохранить ссылку в историю.",
+             variant: "destructive",
+         });
     }
   };
 
@@ -250,11 +260,9 @@ export default function GeneratorPage() {
           // Update source field
           if (selectedTemplate.utm_source) {
               setValue('utm_source_custom', selectedTemplate.utm_source, { shouldValidate: true });
-              // Optionally update preset dropdown for visual feedback if value exists
               const sourcePresetExists = predefinedSources.some(p => p.value === selectedTemplate.utm_source);
               setValue('utm_source_preset', sourcePresetExists ? selectedTemplate.utm_source : '');
           } else {
-              // Clear source fields if template doesn't have it
               setValue('utm_source_custom', '', { shouldValidate: true });
               setValue('utm_source_preset', '');
           }
@@ -262,11 +270,9 @@ export default function GeneratorPage() {
           // Update medium field
           if (selectedTemplate.utm_medium) {
               setValue('utm_medium_custom', selectedTemplate.utm_medium, { shouldValidate: true });
-              // Optionally update preset dropdown for visual feedback
               const mediumPresetExists = predefinedMediums.some(p => p.value === selectedTemplate.utm_medium);
               setValue('utm_medium_preset', mediumPresetExists ? selectedTemplate.utm_medium : '');
           } else {
-              // Clear medium fields if template doesn't have it
               setValue('utm_medium_custom', '', { shouldValidate: true });
               setValue('utm_medium_preset', '');
           }
@@ -286,10 +292,8 @@ export default function GeneratorPage() {
             if (name === 'utm_source_preset' && value.utm_source_preset) {
                 setValue('utm_source_custom', value.utm_source_preset, { shouldValidate: true }); // Set and validate
             } else if (name === 'utm_source_custom' && value.utm_source_custom !== watch('utm_source_preset')) {
-                 // When custom is typed and doesn't match preset, clear the preset visually
                 const presetValue = predefinedSources.find(p => p.value === value.utm_source_custom)?.value || '';
                 setValue('utm_source_preset', presetValue || ''); // Ensure value is string
-                // Trigger validation for the custom field to update error state if needed
                 trigger('utm_source_custom');
             }
 
@@ -297,7 +301,6 @@ export default function GeneratorPage() {
             if (name === 'utm_medium_preset' && value.utm_medium_preset) {
                 setValue('utm_medium_custom', value.utm_medium_preset, { shouldValidate: true }); // Set and validate
             } else if (name === 'utm_medium_custom' && value.utm_medium_custom !== watch('utm_medium_preset')) {
-                 // When custom is typed and doesn't match preset, clear the preset visually
                 const presetValue = predefinedMediums.find(p => p.value === value.utm_medium_custom)?.value || '';
                 setValue('utm_medium_preset', presetValue || ''); // Ensure value is string
                  trigger('utm_medium_custom'); // Validate if needed
@@ -316,7 +319,7 @@ export default function GeneratorPage() {
   return (
     <div className="space-y-8">
       {/* Card for Form Inputs */}
-      <Card className="bg-card"> {/* Use bg-card, removed border */}
+      <Card className="bg-card"> {/* Use bg-card */}
         <CardContent className="p-6">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
 
@@ -325,21 +328,31 @@ export default function GeneratorPage() {
                   <div>
                       <Label htmlFor="template_select">Загрузить шаблон</Label>
                       <Controller
-                        name="template_select" // Add a dummy name for react-hook-form Controller if needed, or manage select state separately
-                        control={control} // This won't directly update form data, but allows control
-                        render={({ field }) => ( // field might not be directly used here
-                          <Select onValueChange={handleTemplateSelect} value={''}> {/* Reset value after select if needed */}
+                        name="template_select"
+                        control={control}
+                        render={({ field }) => (
+                          <Select onValueChange={handleTemplateSelect} value={field.value || ''}>
                               <SelectTrigger id="template_select" className={cn(
                                   'rounded-md shadow-md bg-input text-primary font-medium',
-                                  'text-muted-foreground' // Always show placeholder style initially
+                                  !field.value && 'text-muted-foreground' // Show placeholder style if no value
                               )}>
                                   <SelectValue>
+                                    {field.value ? (
+                                      templates.find(t => t.id === field.value)?.name
+                                    ) : (
                                       <span className="text-muted-foreground flex items-center">
                                           <BookMarked className="mr-2 h-4 w-4" /> Выберите шаблон для загрузки
                                       </span>
+                                    )}
                                   </SelectValue>
                               </SelectTrigger>
                               <SelectContent className="rounded-lg">
+                                  {/* Add a placeholder item */}
+                                  <SelectItem value="" disabled>
+                                      <span className="text-muted-foreground flex items-center">
+                                          <BookMarked className="mr-2 h-4 w-4" /> Выберите шаблон...
+                                      </span>
+                                  </SelectItem>
                                   {templates.map((template) => (
                                       <SelectItem key={template.id} value={template.id}>
                                           {template.name}
@@ -365,127 +378,245 @@ export default function GeneratorPage() {
               {errors.baseUrl && <p className="text-destructive text-sm mt-1">{errors.baseUrl.message}</p>}
             </div>
 
-             {/* UTM Source */}
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <Label htmlFor="utm_source_custom">utm_source (Источник) *</Label>
-                    <Controller
-                        name="utm_source_custom"
-                        control={control}
-                        render={({ field }) => (
-                        <Input
-                            id="utm_source_custom"
-                            placeholder="Например: yandex"
-                            {...field}
-                            className="rounded-md font-medium shadow-md"
-                            onChange={(e) => {
-                                field.onChange(e);
-                                trigger('utm_source_custom');
-                            }}
-                        />
-                        )}
-                    />
-                    {/* Display the refined error message here */}
-                    {errors.utm_source_custom && (
-                      <p className="text-destructive text-sm mt-1">{errors.utm_source_custom.message}</p>
-                    )}
+             {/* UTM Source - Conditional Layout */}
+             <div>
+                <Label htmlFor="utm_source_custom">utm_source (Источник) *</Label>
+                <div className={cn("grid gap-4", isMobile ? "grid-cols-1" : "grid-cols-2")}>
+                    {/* Mobile: Merged Input + Select */}
+                    {isMobile ? (
+                         <div className="flex items-center rounded-md border border-input shadow-md overflow-hidden bg-input">
+                             <Controller
+                                name="utm_source_custom"
+                                control={control}
+                                render={({ field }) => (
+                                <Input
+                                    id="utm_source_custom"
+                                    placeholder="Например: yandex"
+                                    {...field}
+                                    // Remove individual border/shadow, allow flex-grow
+                                    className="flex-grow !border-none !shadow-none !ring-0 focus:!ring-0 rounded-none bg-transparent pl-3 font-medium"
+                                    onChange={(e) => {
+                                        field.onChange(e);
+                                        trigger('utm_source_custom');
+                                    }}
+                                />
+                                )}
+                            />
+                             <Controller
+                                name="utm_source_preset"
+                                control={control}
+                                render={({ field }) => (
+                                <Select
+                                    onValueChange={(value) => field.onChange(value || '')}
+                                    value={field.value || ''}
+                                    disabled={!isAuthenticated} // Disable for guest users
+                                >
+                                    <SelectTrigger
+                                        id="utm_source_preset_mobile"
+                                        // Custom styling for the button look
+                                        className={cn(
+                                            "!h-10 !w-auto !border-none !border-l !border-input !shadow-none !ring-0 focus:!ring-0 rounded-none bg-muted text-primary font-medium px-3",
+                                            !field.value && 'text-muted-foreground',
+                                            !isAuthenticated && 'cursor-not-allowed opacity-50' // Style when disabled
+                                        )}
+                                        aria-label="Предустановленные источники" // Accessibility
+                                    >
+                                         {/* Only show dropdown icon */}
+                                        <SelectValue placeholder="" />
+                                    </SelectTrigger>
+                                    <SelectContent className="rounded-lg">
+                                        {/* Add placeholder item */}
+                                         <SelectItem value="" disabled>Выберите источник</SelectItem>
+                                        {predefinedSources.map((source) => (
+                                            <SelectItem key={source.value} value={source.value}>
+                                            {source.label} ({source.value})
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                )}
+                            />
+                         </div>
+                     ) : (
+                         // Desktop: Separate Input and Select
+                         <>
+                            <Controller
+                                name="utm_source_custom"
+                                control={control}
+                                render={({ field }) => (
+                                <Input
+                                    id="utm_source_custom"
+                                    placeholder="Например: yandex"
+                                    {...field}
+                                    className="rounded-md font-medium shadow-md"
+                                    onChange={(e) => {
+                                        field.onChange(e);
+                                        trigger('utm_source_custom');
+                                    }}
+                                />
+                                )}
+                            />
+                            <div>
+                                <Label htmlFor="utm_source_preset" className="sr-only">Предустановленные источники</Label> {/* Hide label visually but keep for screen readers */}
+                                <Controller
+                                    name="utm_source_preset"
+                                    control={control}
+                                    render={({ field }) => (
+                                    <Select
+                                        onValueChange={(value) => field.onChange(value || '')}
+                                        value={field.value || ''}
+                                        disabled={!isAuthenticated} // Disable for guest users
+                                        >
+                                        <SelectTrigger id="utm_source_preset" className={cn(
+                                            'rounded-md shadow-md bg-input text-primary font-medium',
+                                            !field.value && 'text-muted-foreground',
+                                             !isAuthenticated && 'cursor-not-allowed opacity-50' // Style when disabled
+                                            )}>
+                                            <SelectValue>
+                                                {field.value
+                                                    ? predefinedSources.find(p => p.value === field.value)?.label || field.value
+                                                    : <span className="text-muted-foreground">Выберите источник</span>
+                                                }
+                                            </SelectValue>
+                                        </SelectTrigger>
+                                        <SelectContent className="rounded-lg">
+                                             {/* Add placeholder item */}
+                                             <SelectItem value="" disabled>Выберите источник</SelectItem>
+                                            {predefinedSources.map((source) => (
+                                                <SelectItem key={source.value} value={source.value}>
+                                                {source.label} ({source.value})
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    )}
+                                />
+                            </div>
+                         </>
+                     )}
                 </div>
-                <div>
-                    <Label htmlFor="utm_source_preset">Предустановленные</Label>
-                    <Controller
-                        name="utm_source_preset"
-                        control={control}
-                        render={({ field }) => (
-                        <Select
-                             onValueChange={(value) => {
-                                field.onChange(value || ''); // Ensure value is string
-                            }}
-                            value={field.value || ''} // Ensure value is string
-                            >
-                             {/* Apply same styling as date picker button */}
-                            <SelectTrigger id="utm_source_preset" className={cn(
-                                'rounded-md shadow-md bg-input text-primary font-medium',
-                                !field.value && 'text-muted-foreground'
-                                )}>
-                                 {/* Use render prop for SelectValue to handle placeholder */}
-                                <SelectValue>
-                                     {field.value
-                                         ? predefinedSources.find(p => p.value === field.value)?.label || field.value
-                                         : <span className="text-muted-foreground">Выберите источник</span>
-                                     }
-                                 </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent className="rounded-lg">
-                            {predefinedSources.map((source) => (
-                                <SelectItem key={source.value} value={source.value}>
-                                {source.label} ({source.value})
-                                </SelectItem>
-                            ))}
-                            </SelectContent>
-                        </Select>
-                        )}
-                    />
-                </div>
+                 {/* Display the refined error message here (applies to custom field input) */}
+                 {errors.utm_source_custom && (
+                   <p className="text-destructive text-sm mt-1">{errors.utm_source_custom.message}</p>
+                 )}
             </div>
 
 
-           {/* UTM Medium */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <Label htmlFor="utm_medium_custom">utm_medium (Канал)</Label>
-                    <Controller
-                        name="utm_medium_custom"
-                        control={control}
-                        render={({ field }) => (
-                        <Input
-                            id="utm_medium_custom"
-                            placeholder="Например: cpc"
-                            {...field}
-                            className="rounded-md font-medium shadow-md"
-                            onChange={(e) => {
-                                field.onChange(e);
-                                trigger('utm_medium_custom');
-                            }}
-                        />
-                        )}
-                    />
-                     {errors.utm_medium_custom && <p className="text-destructive text-sm mt-1">{errors.utm_medium_custom.message}</p>}
-                </div>
-                <div>
-                    <Label htmlFor="utm_medium_preset">Предустановленные</Label>
-                    <Controller
-                        name="utm_medium_preset"
-                        control={control}
-                        render={({ field }) => (
-                        <Select
-                           onValueChange={(value) => {
-                                field.onChange(value || ''); // Ensure value is string
-                            }}
-                            value={field.value || ''} // Ensure value is string
-                            >
-                             {/* Apply same styling as date picker button */}
-                            <SelectTrigger id="utm_medium_preset" className={cn(
-                                'rounded-md shadow-md bg-input text-primary font-medium',
-                                !field.value && 'text-muted-foreground'
-                                )}>
-                                <SelectValue>
-                                     {field.value
-                                         ? predefinedMediums.find(p => p.value === field.value)?.label || field.value
-                                         : <span className="text-muted-foreground">Выберите канал</span>
-                                     }
-                                </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent className="rounded-lg">
-                            {predefinedMediums.map((medium) => (
-                                <SelectItem key={medium.value} value={medium.value}>
-                                {medium.label} ({medium.value})
-                                </SelectItem>
-                            ))}
-                            </SelectContent>
-                        </Select>
-                        )}
-                    />
-                </div>
+           {/* UTM Medium - Conditional Layout */}
+            <div>
+                <Label htmlFor="utm_medium_custom">utm_medium (Канал)</Label>
+                 <div className={cn("grid gap-4", isMobile ? "grid-cols-1" : "grid-cols-2")}>
+                     {/* Mobile: Merged Input + Select */}
+                     {isMobile ? (
+                          <div className="flex items-center rounded-md border border-input shadow-md overflow-hidden bg-input">
+                             <Controller
+                                name="utm_medium_custom"
+                                control={control}
+                                render={({ field }) => (
+                                <Input
+                                    id="utm_medium_custom"
+                                    placeholder="Например: cpc"
+                                    {...field}
+                                    className="flex-grow !border-none !shadow-none !ring-0 focus:!ring-0 rounded-none bg-transparent pl-3 font-medium"
+                                    onChange={(e) => {
+                                        field.onChange(e);
+                                        trigger('utm_medium_custom');
+                                    }}
+                                />
+                                )}
+                            />
+                            <Controller
+                                name="utm_medium_preset"
+                                control={control}
+                                render={({ field }) => (
+                                <Select
+                                    onValueChange={(value) => field.onChange(value || '')}
+                                    value={field.value || ''}
+                                     disabled={!isAuthenticated} // Disable for guest users
+                                    >
+                                     <SelectTrigger
+                                        id="utm_medium_preset_mobile"
+                                        className={cn(
+                                            "!h-10 !w-auto !border-none !border-l !border-input !shadow-none !ring-0 focus:!ring-0 rounded-none bg-muted text-primary font-medium px-3",
+                                            !field.value && 'text-muted-foreground',
+                                            !isAuthenticated && 'cursor-not-allowed opacity-50'
+                                        )}
+                                        aria-label="Предустановленные каналы"
+                                    >
+                                         <SelectValue placeholder="" />
+                                    </SelectTrigger>
+                                    <SelectContent className="rounded-lg">
+                                         {/* Add placeholder item */}
+                                        <SelectItem value="" disabled>Выберите канал</SelectItem>
+                                        {predefinedMediums.map((medium) => (
+                                            <SelectItem key={medium.value} value={medium.value}>
+                                            {medium.label} ({medium.value})
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                )}
+                            />
+                          </div>
+                     ) : (
+                         // Desktop: Separate Input and Select
+                         <>
+                             <Controller
+                                name="utm_medium_custom"
+                                control={control}
+                                render={({ field }) => (
+                                <Input
+                                    id="utm_medium_custom"
+                                    placeholder="Например: cpc"
+                                    {...field}
+                                    className="rounded-md font-medium shadow-md"
+                                    onChange={(e) => {
+                                        field.onChange(e);
+                                        trigger('utm_medium_custom');
+                                    }}
+                                />
+                                )}
+                            />
+                             <div>
+                                <Label htmlFor="utm_medium_preset" className="sr-only">Предустановленные каналы</Label>
+                                <Controller
+                                    name="utm_medium_preset"
+                                    control={control}
+                                    render={({ field }) => (
+                                    <Select
+                                        onValueChange={(value) => field.onChange(value || '')}
+                                        value={field.value || ''}
+                                         disabled={!isAuthenticated} // Disable for guest users
+                                        >
+                                        <SelectTrigger id="utm_medium_preset" className={cn(
+                                            'rounded-md shadow-md bg-input text-primary font-medium',
+                                            !field.value && 'text-muted-foreground',
+                                             !isAuthenticated && 'cursor-not-allowed opacity-50'
+                                            )}>
+                                            <SelectValue>
+                                                {field.value
+                                                    ? predefinedMediums.find(p => p.value === field.value)?.label || field.value
+                                                    : <span className="text-muted-foreground">Выберите канал</span>
+                                                }
+                                            </SelectValue>
+                                        </SelectTrigger>
+                                        <SelectContent className="rounded-lg">
+                                             {/* Add placeholder item */}
+                                            <SelectItem value="" disabled>Выберите канал</SelectItem>
+                                            {predefinedMediums.map((medium) => (
+                                                <SelectItem key={medium.value} value={medium.value}>
+                                                {medium.label} ({medium.value})
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    )}
+                                />
+                            </div>
+                         </>
+                    )}
+                 </div>
+                 {errors.utm_medium_custom && <p className="text-destructive text-sm mt-1">{errors.utm_medium_custom.message}</p>}
             </div>
 
             {/* UTM Campaign */}
@@ -572,7 +703,7 @@ export default function GeneratorPage() {
 
        {/* Card for Generated URL Output (conditionally rendered) */}
       {generatedUrl && (
-        <Card className="bg-card"> {/* Use bg-card, removed border */}
+        <Card className="bg-card"> {/* Use bg-card */}
           <CardHeader>
             <CardTitle className="text-xl font-semibold text-primary">Сгенерированная ссылка</CardTitle>
           </CardHeader>
@@ -599,4 +730,3 @@ export default function GeneratorPage() {
     </div>
   );
 }
-
