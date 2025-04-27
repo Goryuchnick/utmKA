@@ -2,7 +2,7 @@
 'use client';
 
 import * as React from 'react';
-import { Copy, Trash2 } from 'lucide-react';
+import { Copy, Trash2, List, LayoutGrid } from 'lucide-react'; // Added List and LayoutGrid icons
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
@@ -21,14 +21,19 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import type { HistoryItem } from '@/types/history-item';
+import { cn } from '@/lib/utils'; // Import cn utility
 
 const HISTORY_STORAGE_KEY = 'utmka_history'; // Use the same key as generator
+const VIEW_MODE_STORAGE_KEY = 'utmka_public_history_view_mode'; // Different key for public view mode
+
+type ViewMode = 'list' | 'grid';
 
 export default function PublicHistoryPage() {
   const { toast } = useToast();
   const [history, setHistory] = React.useState<HistoryItem[]>([]);
+  const [viewMode, setViewMode] = React.useState<ViewMode>('list'); // Default to list view
 
-  // Load history from localStorage on mount
+  // Load history and view mode from localStorage on mount
   React.useEffect(() => {
     try {
       const storedHistoryString = localStorage.getItem(HISTORY_STORAGE_KEY);
@@ -36,18 +41,32 @@ export default function PublicHistoryPage() {
         const parsedHistory: HistoryItem[] = JSON.parse(storedHistoryString);
         setHistory(parsedHistory.map(item => ({
           ...item,
-          date: new Date(item.date) // Convert ISO string back to Date object
+          date: new Date(item.date)
         })));
       }
+
+      const storedViewMode = localStorage.getItem(VIEW_MODE_STORAGE_KEY) as ViewMode | null;
+      if (storedViewMode && (storedViewMode === 'list' || storedViewMode === 'grid')) {
+        setViewMode(storedViewMode);
+      }
     } catch (error) {
-      console.error("Error loading history from localStorage:", error);
+      console.error("Error loading data from localStorage:", error);
       toast({
         title: "Ошибка",
-        description: "Не удалось загрузить историю.",
+        description: "Не удалось загрузить данные.",
         variant: "destructive",
       });
     }
   }, [toast]);
+
+  const handleSetViewMode = (mode: ViewMode) => {
+    setViewMode(mode);
+    try {
+        localStorage.setItem(VIEW_MODE_STORAGE_KEY, mode);
+    } catch (error) {
+        console.error("Error saving view mode to localStorage:", error);
+    }
+  };
 
   const copyToClipboard = (url: string) => {
     navigator.clipboard.writeText(url);
@@ -60,10 +79,8 @@ export default function PublicHistoryPage() {
   const deleteLink = (id: string) => {
       try {
           const updatedHistory = history.filter(item => item.id !== id);
-           // Save back with ISO dates
           localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updatedHistory.map(item => ({
               ...item,
-              // Ensure date is a Date object before calling toISOString
               date: typeof item.date === 'string' ? new Date(item.date).toISOString() : item.date.toISOString()
           }))));
           setHistory(updatedHistory);
@@ -82,62 +99,149 @@ export default function PublicHistoryPage() {
       }
   }
 
+   const renderHistoryItem = (item: HistoryItem) => (
+    <div key={item.id} className="flex flex-col md:flex-row items-start md:items-center gap-4 break-all">
+        <div className="flex-1">
+            <p className="text-secondary mb-2">{item.url}</p>
+            <div className="flex items-center gap-2 flex-wrap">
+                <span className="date-display rounded-md">
+                     {format(typeof item.date === 'string' ? new Date(item.date) : item.date, 'dd MMMM yyyy', { locale: ru })}
+                </span>
+                <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => copyToClipboard(item.url)}
+                    className="h-8 w-8 text-primary hover:text-primary/80 rounded-md shadow-sm hover:shadow transition-shadow"
+                    aria-label="Копировать ссылку"
+                >
+                    <Copy className="h-4 w-4" />
+                </Button>
+                 <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button
+                            variant="destructive"
+                            size="icon"
+                            className="h-8 w-8 rounded-md shadow-sm hover:shadow transition-shadow"
+                            aria-label="Удалить ссылку"
+                        >
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                        <AlertDialogTitle>Вы уверены?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Это действие нельзя отменить. Ссылка будет навсегда удалена из вашей локальной истории.
+                        </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                        <AlertDialogCancel>Отмена</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => deleteLink(item.id)}>
+                            Удалить
+                        </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            </div>
+        </div>
+    </div>
+  );
+
+
   return (
       <div className="space-y-4">
-          {/* Title is handled by AppLayout */}
+          {/* View Mode Switcher */}
+          <div className="flex justify-end gap-2 mb-4">
+              <Button
+                  variant={viewMode === 'list' ? 'secondary' : 'outline'}
+                  size="icon"
+                  onClick={() => handleSetViewMode('list')}
+                  className="h-8 w-8 rounded-md shadow-sm hover:shadow"
+                  aria-label="List view"
+              >
+                  <List className="h-4 w-4" />
+              </Button>
+              <Button
+                  variant={viewMode === 'grid' ? 'secondary' : 'outline'}
+                  size="icon"
+                  onClick={() => handleSetViewMode('grid')}
+                  className="h-8 w-8 rounded-md shadow-sm hover:shadow"
+                  aria-label="Grid view"
+              >
+                  <LayoutGrid className="h-4 w-4" />
+              </Button>
+          </div>
+
           {history.length === 0 ? (
               <p className="text-muted-foreground">История сгенерированных ссылок пуста.</p>
           ) : (
-              history.map((item) => (
-                  <Card key={item.id} className="shadow-sm rounded-lg bg-card">
-                      <CardContent className="p-4 flex flex-col md:flex-row items-start md:items-center gap-4 break-all">
-                          <div className="flex-1">
-                              <p className="text-secondary mb-2">{item.url}</p>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="date-display rounded-md">
-                                      {/* Ensure date is a Date object before formatting */}
-                                     {format(typeof item.date === 'string' ? new Date(item.date) : item.date, 'dd MMMM yyyy', { locale: ru })}
-                                  </span>
-                                  <Button
-                                      variant="outline"
-                                      size="icon"
-                                      onClick={() => copyToClipboard(item.url)}
-                                      className="h-8 w-8 text-primary hover:text-primary/80 rounded-md shadow-sm hover:shadow transition-shadow"
-                                      aria-label="Копировать ссылку"
-                                  >
-                                      <Copy className="h-4 w-4" />
-                                  </Button>
-                                   <AlertDialog>
-                                      <AlertDialogTrigger asChild>
-                                          <Button
-                                              variant="destructive"
-                                              size="icon"
-                                              className="h-8 w-8 rounded-md shadow-sm hover:shadow transition-shadow"
-                                              aria-label="Удалить ссылку"
-                                          >
-                                              <Trash2 className="h-4 w-4" />
-                                          </Button>
-                                      </AlertDialogTrigger>
-                                      <AlertDialogContent>
-                                          <AlertDialogHeader>
-                                          <AlertDialogTitle>Вы уверены?</AlertDialogTitle>
-                                          <AlertDialogDescription>
-                                              Это действие нельзя отменить. Ссылка будет навсегда удалена из вашей локальной истории.
-                                          </AlertDialogDescription>
-                                          </AlertDialogHeader>
-                                          <AlertDialogFooter>
-                                          <AlertDialogCancel>Отмена</AlertDialogCancel>
-                                          <AlertDialogAction onClick={() => deleteLink(item.id)}>
-                                              Удалить
-                                          </AlertDialogAction>
-                                          </AlertDialogFooter>
-                                      </AlertDialogContent>
-                                  </AlertDialog>
-                              </div>
-                          </div>
-                      </CardContent>
-                  </Card>
-              ))
+              viewMode === 'list' ? (
+                  // List View
+                  <div className="space-y-4">
+                      {history.map((item) => (
+                          <Card key={item.id} className="shadow-sm rounded-lg bg-card">
+                              <CardContent className="p-4">
+                                  {renderHistoryItem(item)}
+                              </CardContent>
+                          </Card>
+                      ))}
+                  </div>
+              ) : (
+                  // Grid View
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {history.map((item) => (
+                         <Card key={item.id} className="shadow-sm rounded-lg bg-card flex flex-col"> {/* Ensure card is flex col for grid */}
+                            <CardContent className="p-4 flex-grow"> {/* Use flex-grow */}
+                               {/* Slightly modified rendering for grid card content */}
+                               <p className="text-secondary mb-2 break-all">{item.url}</p>
+                               <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="date-display rounded-md">
+                                        {format(typeof item.date === 'string' ? new Date(item.date) : item.date, 'dd MMM yy', { locale: ru })} {/* Shorter date format */}
+                                    </span>
+                                </div>
+                            </CardContent>
+                             {/* Actions at the bottom */}
+                            <div className="flex justify-end gap-2 px-4 pb-4 pt-2 mt-auto">
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => copyToClipboard(item.url)}
+                                    className="h-8 w-8 text-primary hover:text-primary/80 rounded-md shadow-sm hover:shadow transition-shadow"
+                                    aria-label="Копировать ссылку"
+                                >
+                                    <Copy className="h-4 w-4" />
+                                </Button>
+                                 <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button
+                                            variant="destructive"
+                                            size="icon"
+                                            className="h-8 w-8 rounded-md shadow-sm hover:shadow transition-shadow"
+                                            aria-label="Удалить ссылку"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                        <AlertDialogTitle>Вы уверены?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            Это действие нельзя отменить. Ссылка будет навсегда удалена из вашей локальной истории.
+                                        </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                        <AlertDialogCancel>Отмена</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => deleteLink(item.id)}>
+                                            Удалить
+                                        </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </div>
+                        </Card>
+                      ))}
+                  </div>
+              )
           )}
       </div>
   );
