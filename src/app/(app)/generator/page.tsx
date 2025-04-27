@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import { CalendarIcon, Copy } from 'lucide-react';
+import { CalendarIcon, Copy, BookMarked } from 'lucide-react'; // Added BookMarked icon
 import Link from 'next/link'; // Import Link
 
 import { Button } from '@/components/ui/button';
@@ -51,6 +51,23 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 
+// Interface for Templates (assuming structure from templates page)
+interface Template {
+    id: string;
+    name: string;
+    utm_source?: string;
+    utm_medium?: string;
+}
+
+// Mock templates for demonstration - In a real app, fetch these based on the user
+const mockTemplates: Template[] = [
+    { id: 't1', name: 'Google Ads - CPC', utm_source: 'google', utm_medium: 'cpc' },
+    { id: 't2', name: 'VK Target - CPM', utm_source: 'vk', utm_medium: 'cpm' },
+    { id: 't3', name: 'Email Promo', utm_medium: 'email' }, // Example with only medium
+    { id: 't4', name: 'Yandex Source', utm_source: 'yandex' }, // Example with only source
+];
+
+
 const predefinedSources = [
   { label: 'Имаг', value: 'alpinabook' },
   { label: 'Яндекс', value: 'yandex' },
@@ -70,6 +87,17 @@ export default function GeneratorPage() {
   const [generatedUrl, setGeneratedUrl] = React.useState<string>('');
   const [isDatePopoverOpen, setIsDatePopoverOpen] = React.useState(false); // State to control date picker popover
   const { isAuthenticated, isLoading } = useAuth(); // Get auth state
+  const [templates, setTemplates] = React.useState<Template[]>([]); // State to hold templates
+
+  // TODO: Replace mock data fetching with actual API call based on user ID
+  React.useEffect(() => {
+      if (isAuthenticated) {
+          // Simulate fetching user's templates
+          setTemplates(mockTemplates);
+      } else {
+          setTemplates([]); // Clear templates if user logs out
+      }
+  }, [isAuthenticated]);
 
   const {
     control,
@@ -168,8 +196,10 @@ export default function GeneratorPage() {
         url.search = ''; // Ensure no trailing '?' if no params
     }
     setGeneratedUrl(url.toString());
-    // TODO: Save the generated URL to history (likely requires API call/state management)
-    console.log('Saving to history:', url.toString()); // Placeholder
+    // TODO: Save the generated URL to history (likely requires API call/state management linked to user ID)
+    if (isAuthenticated) {
+        console.log('Saving to history for logged-in user:', url.toString()); // Placeholder
+    }
   };
 
   const copyToClipboard = () => {
@@ -182,6 +212,44 @@ export default function GeneratorPage() {
     }
   };
 
+  // Function to load template data into the form
+  const handleTemplateSelect = (templateId: string) => {
+      if (!templateId) return; // Do nothing if placeholder is selected
+
+      const selectedTemplate = templates.find(t => t.id === templateId);
+      if (selectedTemplate) {
+          // Update source field
+          if (selectedTemplate.utm_source) {
+              setValue('utm_source_custom', selectedTemplate.utm_source, { shouldValidate: true });
+              // Optionally update preset dropdown for visual feedback if value exists
+              const sourcePresetExists = predefinedSources.some(p => p.value === selectedTemplate.utm_source);
+              setValue('utm_source_preset', sourcePresetExists ? selectedTemplate.utm_source : '');
+          } else {
+              // Clear source fields if template doesn't have it
+              setValue('utm_source_custom', '', { shouldValidate: true });
+              setValue('utm_source_preset', '');
+          }
+
+          // Update medium field
+          if (selectedTemplate.utm_medium) {
+              setValue('utm_medium_custom', selectedTemplate.utm_medium, { shouldValidate: true });
+              // Optionally update preset dropdown for visual feedback
+              const mediumPresetExists = predefinedMediums.some(p => p.value === selectedTemplate.utm_medium);
+              setValue('utm_medium_preset', mediumPresetExists ? selectedTemplate.utm_medium : '');
+          } else {
+              // Clear medium fields if template doesn't have it
+              setValue('utm_medium_custom', '', { shouldValidate: true });
+              setValue('utm_medium_preset', '');
+          }
+
+          toast({
+              title: 'Шаблон загружен',
+              description: `Данные из шаблона "${selectedTemplate.name}" применены.`,
+          });
+      }
+  };
+
+
   // Watch changes in preset fields to update custom fields
    React.useEffect(() => {
         const subscription = watch((value, { name }) => {
@@ -191,7 +259,7 @@ export default function GeneratorPage() {
             } else if (name === 'utm_source_custom' && value.utm_source_custom !== watch('utm_source_preset')) {
                  // When custom is typed and doesn't match preset, clear the preset visually
                 const presetValue = predefinedSources.find(p => p.value === value.utm_source_custom)?.value || '';
-                setValue('utm_source_preset', presetValue); // Set preset to matching value or empty
+                setValue('utm_source_preset', presetValue || ''); // Ensure value is string
                 // Trigger validation for the custom field to update error state if needed
                 trigger('utm_source_custom');
             }
@@ -202,7 +270,7 @@ export default function GeneratorPage() {
             } else if (name === 'utm_medium_custom' && value.utm_medium_custom !== watch('utm_medium_preset')) {
                  // When custom is typed and doesn't match preset, clear the preset visually
                 const presetValue = predefinedMediums.find(p => p.value === value.utm_medium_custom)?.value || '';
-                setValue('utm_medium_preset', presetValue); // Set preset to matching value or empty
+                setValue('utm_medium_preset', presetValue || ''); // Ensure value is string
                  trigger('utm_medium_custom'); // Validate if needed
             }
         });
@@ -219,9 +287,36 @@ export default function GeneratorPage() {
   return (
     <div className="space-y-8">
       {/* Card for Form Inputs */}
-      <Card className="shadow-md rounded-lg bg-card"> {/* Use bg-card */}
+      <Card className="bg-card"> {/* Use bg-card, removed border */}
         <CardContent className="p-6">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+
+             {/* Load Template Dropdown (Only shown if logged in and templates exist) */}
+             {isAuthenticated && templates.length > 0 && (
+                  <div>
+                      <Label htmlFor="template_select">Загрузить шаблон</Label>
+                      <Select onValueChange={handleTemplateSelect}>
+                           <SelectTrigger id="template_select" className={cn(
+                                'rounded-md shadow-md bg-input text-primary font-medium',
+                                'text-muted-foreground' // Always show placeholder style initially
+                            )}>
+                                <SelectValue>
+                                     <span className="text-muted-foreground flex items-center">
+                                         <BookMarked className="mr-2 h-4 w-4" /> Выберите шаблон для загрузки
+                                     </span>
+                                 </SelectValue>
+                           </SelectTrigger>
+                           <SelectContent className="rounded-lg">
+                                {templates.map((template) => (
+                                    <SelectItem key={template.id} value={template.id}>
+                                        {template.name}
+                                    </SelectItem>
+                                ))}
+                           </SelectContent>
+                      </Select>
+                  </div>
+             )}
+
             {/* Base URL */}
             <div>
               <Label htmlFor="baseUrl">URL сайта *</Label>
@@ -256,12 +351,8 @@ export default function GeneratorPage() {
                         )}
                     />
                     {/* Display the refined error message here */}
-                    {errors.utm_source_custom && errors.utm_source_custom.type === 'refine' && (
+                    {errors.utm_source_custom && (
                       <p className="text-destructive text-sm mt-1">{errors.utm_source_custom.message}</p>
-                    )}
-                     {/* Display URL validation error if source is fine but URL is not */}
-                    {errors.utm_source_custom && errors.utm_source_custom.type !== 'refine' && errors.baseUrl && (
-                         <p className="text-destructive text-sm mt-1">{errors.baseUrl.message}</p>
                     )}
                 </div>
                 <div>
@@ -272,9 +363,9 @@ export default function GeneratorPage() {
                         render={({ field }) => (
                         <Select
                              onValueChange={(value) => {
-                                field.onChange(value);
+                                field.onChange(value || ''); // Ensure value is string
                             }}
-                            value={field.value || ''}
+                            value={field.value || ''} // Ensure value is string
                             >
                              {/* Apply same styling as date picker button */}
                             <SelectTrigger id="utm_source_preset" className={cn(
@@ -323,6 +414,7 @@ export default function GeneratorPage() {
                         />
                         )}
                     />
+                     {errors.utm_medium_custom && <p className="text-destructive text-sm mt-1">{errors.utm_medium_custom.message}</p>}
                 </div>
                 <div>
                     <Label htmlFor="utm_medium_preset">Предустановленные</Label>
@@ -332,9 +424,9 @@ export default function GeneratorPage() {
                         render={({ field }) => (
                         <Select
                            onValueChange={(value) => {
-                                field.onChange(value);
+                                field.onChange(value || ''); // Ensure value is string
                             }}
-                            value={field.value || ''}
+                            value={field.value || ''} // Ensure value is string
                             >
                              {/* Apply same styling as date picker button */}
                             <SelectTrigger id="utm_medium_preset" className={cn(
@@ -377,6 +469,7 @@ export default function GeneratorPage() {
                     />
                   )}
                 />
+                 {errors.utm_campaign_name && <p className="text-destructive text-sm mt-1">{errors.utm_campaign_name.message}</p>}
               </div>
                <div>
                 <Label htmlFor="utm_campaign_date">Дата кампании (Месяц, Год)</Label>
@@ -407,6 +500,7 @@ export default function GeneratorPage() {
                       </Popover>
                     )}
                   />
+                   {errors.utm_campaign_date && <p className="text-destructive text-sm mt-1">{errors.utm_campaign_date.message}</p>}
               </div>
             </div>
 
@@ -420,6 +514,7 @@ export default function GeneratorPage() {
                     <Input id="utm_term" placeholder="Например: buy+book" {...field} className="rounded-md font-medium shadow-md" />
                   )}
                 />
+                 {errors.utm_term && <p className="text-destructive text-sm mt-1">{errors.utm_term.message}</p>}
             </div>
 
              {/* UTM Content */}
@@ -432,6 +527,7 @@ export default function GeneratorPage() {
                    <Input id="utm_content" placeholder="Например: banner_728x90" {...field} className="rounded-md font-medium shadow-md"/>
                   )}
                 />
+                 {errors.utm_content && <p className="text-destructive text-sm mt-1">{errors.utm_content.message}</p>}
             </div>
 
             <Button type="submit" className="w-full md:w-auto rounded-md shadow-md hover:shadow-lg transition-shadow">Сгенерировать</Button>
@@ -441,7 +537,7 @@ export default function GeneratorPage() {
 
        {/* Card for Generated URL Output (conditionally rendered) */}
       {generatedUrl && (
-        <Card className="shadow-md rounded-lg bg-card"> {/* Use bg-card */}
+        <Card className="bg-card"> {/* Use bg-card, removed border */}
           <CardHeader>
             <CardTitle className="text-xl font-semibold text-primary">Сгенерированная ссылка</CardTitle>
           </CardHeader>
