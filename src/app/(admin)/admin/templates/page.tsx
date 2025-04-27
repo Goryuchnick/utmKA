@@ -383,7 +383,7 @@ export default function TemplatesPage() {
     // Helper component for sortable table headers
     const SortableTableHead = ({ column, label }: { column: SortableColumns, label: string }) => (
         <TableHead
-            className="cursor-pointer hover:bg-muted/50 transition-colors"
+            className="cursor-pointer hover:bg-muted/50 transition-colors whitespace-nowrap" // Added whitespace-nowrap
             onClick={() => handleSort(column)}
         >
             <div className="flex items-center gap-1">
@@ -544,22 +544,25 @@ export default function TemplatesPage() {
                     </div>
                 ) : (
                    // Table View
-                    <Card className="shadow-sm rounded-lg bg-card overflow-hidden"> {/* Added overflow-hidden */}
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <SortableTableHead column="name" label="Название" />
-                                    <SortableTableHead column="utm_source" label="Источник" />
-                                    <SortableTableHead column="utm_medium" label="Канал" />
-                                    <SortableTableHead column="groupName" label="Группа" />
-                                    <SortableTableHead column="createdAt" label="Дата" />
-                                    <TableHead className="text-right">Действия</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {sortedAndFilteredTemplates.map(renderTemplateTableRow)}
-                            </TableBody>
-                        </Table>
+                    <Card className="shadow-sm rounded-lg bg-card overflow-hidden">
+                         {/* Wrapper div for horizontal scrolling on mobile */}
+                        <div className="w-full overflow-x-auto">
+                            <Table className="min-w-max"> {/* Ensure table takes minimum width needed */}
+                                <TableHeader>
+                                    <TableRow>
+                                        <SortableTableHead column="name" label="Название" />
+                                        <SortableTableHead column="utm_source" label="Источник" />
+                                        <SortableTableHead column="utm_medium" label="Канал" />
+                                        <SortableTableHead column="groupName" label="Группа" />
+                                        <SortableTableHead column="createdAt" label="Дата" />
+                                        <TableHead className="text-right">Действия</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {sortedAndFilteredTemplates.map(renderTemplateTableRow)}
+                                </TableBody>
+                            </Table>
+                        </div>
                     </Card>
                 )
             )}
@@ -672,3 +675,4 @@ export default function TemplatesPage() {
         </div>
     );
 }
+
