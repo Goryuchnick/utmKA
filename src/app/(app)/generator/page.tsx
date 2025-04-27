@@ -128,10 +128,10 @@ export default function GeneratorPage() {
     const utmMedium = data.utm_medium_custom || data.utm_medium_preset;
 
     // Only add utm_source if it has a value (it's required by schema refinement)
-    if (utmSource) params.set('utm_source', utmSource);
+    if (utmSource) params.set('utm_source', utmSource.trim());
 
     // Add other optional params only if they have values
-    if (utmMedium) params.set('utm_medium', utmMedium);
+    if (utmMedium) params.set('utm_medium', utmMedium.trim());
 
     // Updated UTM Campaign Logic
     let campaignValue = '';
@@ -219,7 +219,7 @@ export default function GeneratorPage() {
   return (
     <div className="space-y-8">
       {/* Card for Form Inputs */}
-      <Card className="shadow-md rounded-lg bg-card">
+      <Card className="shadow-md rounded-lg bg-card"> {/* Use bg-card */}
         <CardContent className="p-6">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {/* Base URL */}
@@ -276,7 +276,11 @@ export default function GeneratorPage() {
                             }}
                             value={field.value || ''}
                             >
-                            <SelectTrigger id="utm_source_preset" className="rounded-md bg-input text-primary shadow-md font-medium">
+                             {/* Apply same styling as date picker button */}
+                            <SelectTrigger id="utm_source_preset" className={cn(
+                                'rounded-md shadow-md bg-input text-primary font-medium',
+                                !field.value && 'text-muted-foreground'
+                                )}>
                                  {/* Use render prop for SelectValue to handle placeholder */}
                                 <SelectValue>
                                      {field.value
@@ -332,7 +336,11 @@ export default function GeneratorPage() {
                             }}
                             value={field.value || ''}
                             >
-                            <SelectTrigger id="utm_medium_preset" className="rounded-md bg-input text-primary shadow-md font-medium">
+                             {/* Apply same styling as date picker button */}
+                            <SelectTrigger id="utm_medium_preset" className={cn(
+                                'rounded-md shadow-md bg-input text-primary font-medium',
+                                !field.value && 'text-muted-foreground'
+                                )}>
                                 <SelectValue>
                                      {field.value
                                          ? predefinedMediums.find(p => p.value === field.value)?.label || field.value
@@ -381,8 +389,8 @@ export default function GeneratorPage() {
                            <Button
                                 variant={'outline'}
                                 className={cn(
-                                'w-full justify-start text-left font-normal rounded-md shadow-md bg-input text-primary font-medium',
-                                !field.value && 'text-muted-foreground'
+                                'w-full justify-start text-left font-normal rounded-md shadow-md bg-input text-primary font-medium', // Applied bg-input and text-primary
+                                !field.value && 'text-muted-foreground' // Keep muted foreground for placeholder
                                 )}
                             >
                                 <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
@@ -433,7 +441,7 @@ export default function GeneratorPage() {
 
        {/* Card for Generated URL Output (conditionally rendered) */}
       {generatedUrl && (
-        <Card className="shadow-md rounded-lg bg-card">
+        <Card className="shadow-md rounded-lg bg-card"> {/* Use bg-card */}
           <CardHeader>
             <CardTitle className="text-xl font-semibold text-primary">Сгенерированная ссылка</CardTitle>
           </CardHeader>
@@ -450,7 +458,7 @@ export default function GeneratorPage() {
 
        {/* Conditional Login Prompt */}
         {!isLoading && !isAuthenticated && (
-             <p className="text-sm text-muted-foreground text-center mt-4">
+             <p className="text-sm text-secondary text-center mt-4"> {/* Changed text-muted-foreground to text-secondary */}
                  Чтобы смотреть историю создания размеченных ссылок,{' '}
                  <Link href="/login" className="font-bold text-primary hover:underline">
                      войдите в аккаунт →
