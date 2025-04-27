@@ -1,13 +1,14 @@
 import type { Metadata } from 'next';
-import { Droid_Sans_Mono } from 'next/font/google';
+// Using Roboto_Mono as a replacement due to issues resolving Droid_Sans_Mono with next/font/google
+import { Roboto_Mono } from 'next/font/google';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import AppLayout from '@/components/layout/app-layout';
 
-const droidSansMono = Droid_Sans_Mono({
+const robotoMono = Roboto_Mono({
   weight: ['400'],
   subsets: ['latin'],
-  variable: '--font-droid-sans-mono',
+  variable: '--font-roboto-mono', // Updated variable name
 });
 
 export const metadata: Metadata = {
@@ -22,7 +23,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru">
-      <body className={`${droidSansMono.variable} font-mono antialiased`}>
+      {/* Updated className to use the new font variable */}
+      <body className={`${robotoMono.variable} font-mono antialiased`}>
         <AppLayout>{children}</AppLayout>
         <Toaster />
       </body>
