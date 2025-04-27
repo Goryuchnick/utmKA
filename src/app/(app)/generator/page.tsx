@@ -19,8 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-// Remove Calendar import
-// import { Calendar } from '@/components/ui/calendar';
 import {
   Popover,
   PopoverContent,
@@ -104,7 +102,23 @@ export default function GeneratorPage() {
         return; // Stop submission if validation fails
     }
 
-    const url = new URL(data.baseUrl);
+    let url: URL;
+    try {
+      // Prepend https:// if no protocol is provided
+      let baseUrl = data.baseUrl;
+      if (!baseUrl.match(/^https?:\/\//)) {
+          baseUrl = `https://${baseUrl}`;
+      }
+      url = new URL(baseUrl);
+    } catch (e) {
+        toast({
+            title: "Неверный URL",
+            description: "Пожалуйста, введите корректный URL сайта.",
+            variant: "destructive",
+        });
+        return;
+    }
+
     const params = new URLSearchParams();
 
     const utmSource = data.utm_source_custom || data.utm_source_preset;
@@ -116,19 +130,34 @@ export default function GeneratorPage() {
     // Add other optional params only if they have values
     if (utmMedium) params.set('utm_medium', utmMedium);
 
+    // Updated UTM Campaign Logic
     let campaignValue = '';
-    if (data.utm_campaign_name && data.utm_campaign_date) {
-        const monthRussian = format(data.utm_campaign_date, 'LLLL', { locale: ru });
+    const campaignName = data.utm_campaign_name?.trim(); // Trim whitespace
+    const campaignDate = data.utm_campaign_date;
+
+    if (campaignDate) {
+        const monthRussian = format(campaignDate, 'LLLL', { locale: ru });
         const monthEnglish = translateMonth(monthRussian.toLowerCase());
-        const year = format(data.utm_campaign_date, 'yyyy');
-        campaignValue = `${data.utm_campaign_name}_${monthEnglish}_${year}`;
-    } else if (data.utm_campaign_name) {
-        campaignValue = data.utm_campaign_name;
+        const year = format(campaignDate, 'yyyy');
+        const datePart = `${monthEnglish}_${year}`;
+
+        if (campaignName) {
+            // Both name and date provided
+            campaignValue = `${campaignName}_${datePart}`;
+        } else {
+            // Only date provided
+            campaignValue = datePart;
+        }
+    } else if (campaignName) {
+        // Only name provided
+        campaignValue = campaignName;
     }
+
     if (campaignValue) params.set('utm_campaign', campaignValue);
 
-    if (data.utm_term) params.set('utm_term', data.utm_term);
-    if (data.utm_content) params.set('utm_content', data.utm_content);
+
+    if (data.utm_term) params.set('utm_term', data.utm_term.trim());
+    if (data.utm_content) params.set('utm_content', data.utm_content.trim());
 
     if (params.toString()) {
         url.search = params.toString();
@@ -157,14 +186,21 @@ export default function GeneratorPage() {
             if (name === 'utm_source_preset' && value.utm_source_preset) {
                 setValue('utm_source_custom', value.utm_source_preset, { shouldValidate: true }); // Set and validate
             } else if (name === 'utm_source_custom' && value.utm_source_custom !== watch('utm_source_preset')) {
-                setValue('utm_source_preset', ''); // Clear preset if custom changes
+                 // When custom is typed and doesn't match preset, clear the preset visually
+                const presetValue = predefinedSources.find(p => p.value === value.utm_source_custom)?.value || '';
+                setValue('utm_source_preset', presetValue); // Set preset to matching value or empty
+                // Trigger validation for the custom field to update error state if needed
+                trigger('utm_source_custom');
             }
 
             // Handle medium sync
             if (name === 'utm_medium_preset' && value.utm_medium_preset) {
                 setValue('utm_medium_custom', value.utm_medium_preset, { shouldValidate: true }); // Set and validate
             } else if (name === 'utm_medium_custom' && value.utm_medium_custom !== watch('utm_medium_preset')) {
-                 setValue('utm_medium_preset', ''); // Clear preset if custom changes
+                 // When custom is typed and doesn't match preset, clear the preset visually
+                const presetValue = predefinedMediums.find(p => p.value === value.utm_medium_custom)?.value || '';
+                setValue('utm_medium_preset', presetValue); // Set preset to matching value or empty
+                 trigger('utm_medium_custom'); // Validate if needed
             }
         });
         return () => subscription.unsubscribe();
@@ -190,7 +226,7 @@ export default function GeneratorPage() {
                 name="baseUrl"
                 control={control}
                 render={({ field }) => (
-                  <Input id="baseUrl" placeholder="https://example.com/" {...field} className="rounded-md font-medium"/>
+                  <Input id="baseUrl" placeholder="https://example.com/" {...field} className="rounded-md font-medium shadow-md"/>
                 )}
               />
               {errors.baseUrl && <p className="text-destructive text-sm mt-1">{errors.baseUrl.message}</p>}
@@ -208,12 +244,11 @@ export default function GeneratorPage() {
                             id="utm_source_custom"
                             placeholder="Например: yandex"
                             {...field}
-                            className="rounded-md font-medium" // Added font-medium
+                            className="rounded-md font-medium shadow-md" // Added font-medium and shadow
                             onChange={(e) => {
                                 field.onChange(e);
-                                // Logic to clear preset moved to useEffect watcher
-                                // Trigger validation after custom input changes
-                                trigger('utm_source_custom');
+                                // Logic to clear/sync preset moved to useEffect watcher
+                                trigger('utm_source_custom'); // Trigger validation after custom input changes
                             }}
                         />
                         )}
@@ -221,6 +256,10 @@ export default function GeneratorPage() {
                     {/* Display the refined error message here */}
                     {errors.utm_source_custom && errors.utm_source_custom.type === 'refine' && (
                       <p className="text-destructive text-sm mt-1">{errors.utm_source_custom.message}</p>
+                    )}
+                     {/* Display URL validation error if source is fine but URL is not */}
+                    {errors.utm_source_custom && errors.utm_source_custom.type !== 'refine' && errors.baseUrl && (
+                         <p className="text-destructive text-sm mt-1">{errors.baseUrl.message}</p>
                     )}
                 </div>
                 <div>
@@ -234,14 +273,14 @@ export default function GeneratorPage() {
                                 field.onChange(value);
                                 // Logic to set custom field and trigger validation is in useEffect watcher
                             }}
-                            value={field.value || ''}
+                            value={field.value || ''} // Ensure value is controlled and defaults to empty string
                             >
                             <SelectTrigger id="utm_source_preset" className="rounded-md bg-input text-primary shadow-md font-medium"> {/* Match date picker style */}
                                 <SelectValue placeholder={<span className="text-muted-foreground">Выберите источник</span>} /> {/* Styled placeholder */}
                             </SelectTrigger>
-                            <SelectContent>
-                            {/* Allow clearing by selecting empty string if needed, but handled by custom input */}
-                            {/* <SelectItem value="">-- Не выбрано --</SelectItem> */}
+                            <SelectContent className="rounded-lg"> {/* Use rounded-lg */}
+                            {/* Add an explicit "Clear" or "None" option if desired */}
+                             <SelectItem value="" disabled hidden>Выберите источник</SelectItem> {/* Hidden placeholder item */}
                             {predefinedSources.map((source) => (
                                 <SelectItem key={source.value} value={source.value}>
                                 {source.label} ({source.value})
@@ -268,10 +307,10 @@ export default function GeneratorPage() {
                             id="utm_medium_custom"
                             placeholder="Например: cpc"
                             {...field}
-                            className="rounded-md font-medium" // Added font-medium
+                            className="rounded-md font-medium shadow-md" // Added font-medium and shadow
                             onChange={(e) => {
                                 field.onChange(e);
-                                // Logic to clear preset moved to useEffect watcher
+                                // Logic to clear/sync preset moved to useEffect watcher
                                 trigger('utm_medium_custom'); // Validate on change if needed
                             }}
                         />
@@ -290,13 +329,13 @@ export default function GeneratorPage() {
                                 field.onChange(value);
                                 // Logic to set custom field is in useEffect watcher
                             }}
-                            value={field.value || ''}
+                            value={field.value || ''} // Ensure value is controlled and defaults to empty string
                             >
                             <SelectTrigger id="utm_medium_preset" className="rounded-md bg-input text-primary shadow-md font-medium"> {/* Match date picker style */}
                                 <SelectValue placeholder={<span className="text-muted-foreground">Выберите канал</span>} /> {/* Styled placeholder */}
                             </SelectTrigger>
-                            <SelectContent>
-                             {/* <SelectItem value="">-- Не выбрано --</SelectItem> */}
+                            <SelectContent className="rounded-lg"> {/* Use rounded-lg */}
+                             <SelectItem value="" disabled hidden>Выберите канал</SelectItem> {/* Hidden placeholder item */}
                             {predefinedMediums.map((medium) => (
                                 <SelectItem key={medium.value} value={medium.value}>
                                 {medium.label} ({medium.value})
@@ -322,7 +361,7 @@ export default function GeneratorPage() {
                       id="utm_campaign_name"
                       placeholder="Например: summer_sale"
                       {...field}
-                      className="rounded-md font-medium" // Added font-medium
+                      className="rounded-md font-medium shadow-md" // Added font-medium and shadow
                     />
                   )}
                 />
@@ -368,7 +407,7 @@ export default function GeneratorPage() {
                   name="utm_term"
                   control={control}
                   render={({ field }) => (
-                    <Input id="utm_term" placeholder="Например: buy+book" {...field} className="rounded-md font-medium" /> // Added font-medium
+                    <Input id="utm_term" placeholder="Например: buy+book" {...field} className="rounded-md font-medium shadow-md" /> // Added font-medium and shadow
                   )}
                 />
                  {/* Optional field: No error display needed */}
@@ -381,7 +420,7 @@ export default function GeneratorPage() {
                   name="utm_content"
                   control={control}
                   render={({ field }) => (
-                   <Input id="utm_content" placeholder="Например: banner_728x90" {...field} className="rounded-md font-medium"/> // Added font-medium
+                   <Input id="utm_content" placeholder="Например: banner_728x90" {...field} className="rounded-md font-medium shadow-md"/> // Added font-medium and shadow
                   )}
                 />
                  {/* Optional field: No error display needed */}
@@ -396,7 +435,7 @@ export default function GeneratorPage() {
       {generatedUrl && (
         <Card className="shadow-md rounded-lg bg-card"> {/* Ensure card background is white */}
           <CardHeader>
-            <CardTitle className="text-xl font-semibold">Сгенерированная ссылка</CardTitle>
+            <CardTitle className="text-xl font-semibold text-primary">Сгенерированная ссылка</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col md:flex-row items-start md:items-center gap-4 break-all p-6">
              {/* Make the URL text selectable */}
@@ -411,5 +450,7 @@ export default function GeneratorPage() {
     </div>
   );
 }
+
+    
 
     
