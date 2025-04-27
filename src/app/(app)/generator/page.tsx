@@ -32,7 +32,7 @@ import { translateMonth } from '@/services/date-formatter';
 import { MonthPicker } from '@/components/ui/month-picker';
 import { useAuth } from '@/hooks/use-auth'; // Import useAuth
 import type { HistoryItem } from '@/types/history-item'; // Import shared type
-import { useIsMobile } from '@/hooks/use-mobile'; // Import useIsMobile hook - still needed for other layout adjustments if any
+import { useIsMobile } from '@/hooks/use-mobile'; // Import useIsMobile hook
 
 
 // Updated form schema: only baseUrl and utm_source are required
@@ -210,20 +210,20 @@ export default function GeneratorPage() {
     // Save the generated URL to history (for both logged in and guest users)
     try {
         const currentHistoryString = localStorage.getItem(HISTORY_STORAGE_KEY);
+        // Parse history, keeping dates as strings initially
         const currentHistory: HistoryItem[] = currentHistoryString ? JSON.parse(currentHistoryString) : [];
-
-        // Convert stored dates back to Date objects for comparison/sorting if needed, though ISO strings are fine for storage
-        const currentHistoryDates = currentHistory.map(item => ({ ...item, date: new Date(item.date) }));
 
         const newHistoryItem: HistoryItem = {
             id: Date.now().toString(), // Simple unique ID
             url: finalUrl,
-            date: new Date().toISOString(), // Store date as ISO string
+            date: new Date().toISOString(), // Store new date as ISO string
         };
 
-        // Add new item and save back to localStorage
-        const updatedHistory = [newHistoryItem, ...currentHistoryDates]; // Add to the beginning
-        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updatedHistory.map(item => ({ ...item, date: item.date.toISOString() })))); // Save dates as ISO strings
+        // Add new item (with ISO string date) and existing history (with string dates)
+        const updatedHistory = [newHistoryItem, ...currentHistory]; // Add to the beginning
+
+        // Save the updated history directly (all dates are strings now)
+        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updatedHistory));
 
         // If authenticated, you might also sync this with a backend database here
         // if (isAuthenticated) {
@@ -323,7 +323,7 @@ export default function GeneratorPage() {
   return (
     <div className="space-y-8">
       {/* Card for Form Inputs */}
-      <Card className="bg-card border-none shadow-lg"> {/* Use bg-card and remove border */}
+      <Card className="bg-card shadow-lg rounded-lg"> {/* Use bg-card and rounded-lg */}
         <CardContent className="p-6">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
 
@@ -427,7 +427,7 @@ export default function GeneratorPage() {
                                 aria-label="Предустановленные источники" // Accessibility
                             >
                                     {/* Show value or placeholder */}
-                                <SelectValue placeholder={<span className="text-muted-foreground">Выберите источник</span>}>
+                                <SelectValue placeholder={<span className="text-muted-foreground">Источник</span>}>
                                     {field.value && field.value !== '__placeholder__'
                                         ? predefinedSources.find(p => p.value === field.value)?.label || field.value
                                         : <span className="text-muted-foreground">Источник</span> // Short placeholder
@@ -498,7 +498,7 @@ export default function GeneratorPage() {
                                 aria-label="Предустановленные каналы"
                             >
                                     {/* Show value or placeholder */}
-                                    <SelectValue placeholder={<span className="text-muted-foreground">Выберите канал</span>}>
+                                    <SelectValue placeholder={<span className="text-muted-foreground">Канал</span>}>
                                         {field.value && field.value !== '__placeholder__'
                                             ? predefinedMediums.find(p => p.value === field.value)?.label || field.value
                                             : <span className="text-muted-foreground">Канал</span> // Short placeholder
@@ -612,7 +612,7 @@ export default function GeneratorPage() {
 
        {/* Card for Generated URL Output (conditionally rendered) */}
       {generatedUrl && (
-        <Card className="bg-card border-none shadow-lg"> {/* Use bg-card and remove border */}
+        <Card className="bg-card shadow-lg rounded-lg"> {/* Use bg-card and rounded-lg */}
           <CardHeader>
             <CardTitle className="text-xl font-semibold text-primary">Сгенерированная ссылка</CardTitle>
           </CardHeader>

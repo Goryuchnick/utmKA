@@ -36,7 +36,7 @@ export default function PublicHistoryPage() {
         const parsedHistory: HistoryItem[] = JSON.parse(storedHistoryString);
         setHistory(parsedHistory.map(item => ({
           ...item,
-          date: new Date(item.date) // Convert ISO string back to Date
+          date: new Date(item.date) // Convert ISO string back to Date object
         })));
       }
     } catch (error) {
@@ -60,7 +60,12 @@ export default function PublicHistoryPage() {
   const deleteLink = (id: string) => {
       try {
           const updatedHistory = history.filter(item => item.id !== id);
-          localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updatedHistory.map(item => ({...item, date: item.date.toISOString()}))));
+           // Save back with ISO dates
+          localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updatedHistory.map(item => ({
+              ...item,
+              // Ensure date is a Date object before calling toISOString
+              date: typeof item.date === 'string' ? new Date(item.date).toISOString() : item.date.toISOString()
+          }))));
           setHistory(updatedHistory);
           toast({
             title: 'Удалено!',
@@ -90,7 +95,8 @@ export default function PublicHistoryPage() {
                               <p className="text-secondary mb-2">{item.url}</p>
                               <div className="flex items-center gap-2 flex-wrap">
                                   <span className="date-display rounded-md">
-                                      {format(item.date, 'dd MMMM yyyy', { locale: ru })}
+                                      {/* Ensure date is a Date object before formatting */}
+                                     {format(typeof item.date === 'string' ? new Date(item.date) : item.date, 'dd MMMM yyyy', { locale: ru })}
                                   </span>
                                   <Button
                                       variant="outline"

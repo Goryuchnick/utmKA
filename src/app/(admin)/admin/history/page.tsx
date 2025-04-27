@@ -35,10 +35,10 @@ export default function AdminHistoryPage() {
       const storedHistoryString = localStorage.getItem(HISTORY_STORAGE_KEY);
       if (storedHistoryString) {
         const parsedHistory: HistoryItem[] = JSON.parse(storedHistoryString);
-        // Ensure dates are Date objects (or handle as strings if preferred)
+        // Ensure dates are Date objects
         setHistory(parsedHistory.map(item => ({
           ...item,
-          date: new Date(item.date) // Convert ISO string back to Date
+          date: new Date(item.date) // Convert ISO string back to Date object
         })));
       }
     } catch (error) {
@@ -62,7 +62,12 @@ export default function AdminHistoryPage() {
   const deleteLink = (id: string) => {
       try {
           const updatedHistory = history.filter(item => item.id !== id);
-          localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updatedHistory.map(item => ({...item, date: item.date.toISOString()})))); // Save back with ISO dates
+          // Save back with ISO dates
+          localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updatedHistory.map(item => ({
+              ...item,
+              // Ensure date is a Date object before calling toISOString
+              date: typeof item.date === 'string' ? new Date(item.date).toISOString() : item.date.toISOString()
+          }))));
           setHistory(updatedHistory);
           toast({
             title: 'Удалено!',
@@ -93,7 +98,8 @@ export default function AdminHistoryPage() {
                               <div className="flex items-center gap-2 flex-wrap">
                                   {/* Non-clickable date display */}
                                   <span className="date-display rounded-md"> {/* Apply rounded-md */}
-                                      {format(item.date, 'dd MMMM yyyy', { locale: ru })}
+                                       {/* Ensure date is a Date object before formatting */}
+                                      {format(typeof item.date === 'string' ? new Date(item.date) : item.date, 'dd MMMM yyyy', { locale: ru })}
                                   </span>
                                   {/* Copy Button */}
                                   <Button
