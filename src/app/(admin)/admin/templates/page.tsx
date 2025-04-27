@@ -113,17 +113,18 @@ export default function TemplatesPage() {
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {templates.map((template) => (
                         <Card key={template.id} className="shadow-sm rounded-lg bg-card">
-                            <CardHeader>
+                            <CardHeader className="pb-2"> {/* Reduced padding bottom */}
                                 <CardTitle className="text-lg font-semibold">{template.name}</CardTitle>
                             </CardHeader>
-                            <CardContent className="text-sm space-y-1">
+                            <CardContent className="text-sm space-y-1 pb-2"> {/* Reduced padding bottom */}
                                 {/* Display only source and medium */}
                                 {template.utm_source && <p><strong>Источник:</strong> {template.utm_source}</p>}
                                 {template.utm_medium && <p><strong>Канал:</strong> {template.utm_medium}</p>}
                                 {/* Show a message if neither is set */}
                                 {!template.utm_source && !template.utm_medium && <p className="text-muted-foreground">Источник и канал не заданы</p>}
                             </CardContent>
-                            <div className="flex justify-end gap-2 p-4 border-t border-border">
+                             {/* Removed border-t and border-border, reduced top padding (pt-2 instead of p-4) */}
+                            <div className="flex justify-end gap-2 px-4 pb-4 pt-2">
                                 <Button variant="outline" size="icon" onClick={() => openDialogForEdit(template)} className="h-8 w-8 rounded-md shadow-sm hover:shadow">
                                     <Edit className="h-4 w-4" />
                                     <span className="sr-only">Редактировать</span>
@@ -191,3 +192,4 @@ export default function TemplatesPage() {
         </div>
     );
 }
+
