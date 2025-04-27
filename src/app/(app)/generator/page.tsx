@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -65,7 +66,6 @@ export default function GeneratorPage() {
     handleSubmit,
     watch,
     setValue,
-    reset,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -81,27 +81,14 @@ export default function GeneratorPage() {
     },
   });
 
-  const watchSourcePreset = watch('utm_source_preset');
-  const watchMediumPreset = watch('utm_medium_preset');
-
-  React.useEffect(() => {
-    if (watchSourcePreset) {
-      setValue('utm_source_custom', ''); // Clear custom field if preset is selected
-    }
-  }, [watchSourcePreset, setValue]);
-
-  React.useEffect(() => {
-    if (watchMediumPreset) {
-      setValue('utm_medium_custom', ''); // Clear custom field if preset is selected
-    }
-  }, [watchMediumPreset, setValue]);
-
   const onSubmit = (data: FormData) => {
     const url = new URL(data.baseUrl);
     const params = new URLSearchParams();
 
-    const utmSource = data.utm_source_custom || data.utm_source_preset;
-    const utmMedium = data.utm_medium_custom || data.utm_medium_preset;
+    // Use the custom fields as the source of truth, as they contain
+    // either the manually entered value or the value from the preset.
+    const utmSource = data.utm_source_custom;
+    const utmMedium = data.utm_medium_custom;
 
     if (utmSource) params.set('utm_source', utmSource);
     if (utmMedium) params.set('utm_medium', utmMedium);
@@ -120,7 +107,12 @@ export default function GeneratorPage() {
     if (data.utm_term) params.set('utm_term', data.utm_term);
     if (data.utm_content) params.set('utm_content', data.utm_content);
 
-    url.search = params.toString();
+    // Only add params if there are any
+    if (params.toString()) {
+        url.search = params.toString();
+    } else {
+        url.search = ''; // Ensure no trailing '?' if no params
+    }
     setGeneratedUrl(url.toString());
   };
 
@@ -137,7 +129,7 @@ export default function GeneratorPage() {
   return (
     <div className="container mx-auto p-4 md:p-8">
       <h1 className="text-3xl font-bold mb-6 text-primary">Генератор UTM-меток</h1>
-      <Card className="mb-8 shadow-md">
+      <Card className="mb-8 shadow-md rounded-lg">
         <CardContent className="p-6">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div>
@@ -146,7 +138,7 @@ export default function GeneratorPage() {
                 name="baseUrl"
                 control={control}
                 render={({ field }) => (
-                  <Input id="baseUrl" placeholder="https://example.com/" {...field} />
+                  <Input id="baseUrl" placeholder="https://example.com/" {...field} className="rounded-md shadow-sm"/>
                 )}
               />
               {errors.baseUrl && <p className="text-destructive text-sm mt-1">{errors.baseUrl.message}</p>}
@@ -163,7 +155,14 @@ export default function GeneratorPage() {
                         id="utm_source_custom"
                         placeholder="Например: yandex"
                         {...field}
-                        disabled={!!watchSourcePreset}
+                         className="rounded-md shadow-sm"
+                        onChange={(e) => {
+                          field.onChange(e); // Update custom field state
+                          // Clear preset if user types manually
+                          if (watch('utm_source_preset')) {
+                              setValue('utm_source_preset', '');
+                          }
+                        }}
                       />
                     )}
                   />
@@ -174,14 +173,23 @@ export default function GeneratorPage() {
                     name="utm_source_preset"
                     control={control}
                     render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value} disabled={!!watch('utm_source_custom')}>
-                        <SelectTrigger id="utm_source_preset">
-                          <SelectValue placeholder="Выберите источник" />
+                      <Select
+                        onValueChange={(value) => {
+                            field.onChange(value); // Update preset field state in RHF
+                            setValue('utm_source_custom', value); // Set custom field value
+                        }}
+                        value={field.value}
+                        >
+                        <SelectTrigger id="utm_source_preset" className="rounded-md shadow-sm">
+                           {/* Use SelectValue with placeholder */}
+                           <SelectValue placeholder="Выберите источник" />
                         </SelectTrigger>
                         <SelectContent>
+                           {/* Add an option to clear the selection */}
+                           <SelectItem value="">-- Не выбрано --</SelectItem>
                           {predefinedSources.map((source) => (
                             <SelectItem key={source.value} value={source.value}>
-                              {source.label}
+                              {source.label} ({source.value})
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -202,7 +210,14 @@ export default function GeneratorPage() {
                         id="utm_medium_custom"
                         placeholder="Например: cpc"
                         {...field}
-                        disabled={!!watchMediumPreset}
+                         className="rounded-md shadow-sm"
+                         onChange={(e) => {
+                            field.onChange(e); // Update custom field state
+                            // Clear preset if user types manually
+                            if (watch('utm_medium_preset')) {
+                                setValue('utm_medium_preset', '');
+                            }
+                         }}
                       />
                     )}
                   />
@@ -213,14 +228,21 @@ export default function GeneratorPage() {
                     name="utm_medium_preset"
                     control={control}
                     render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value} disabled={!!watch('utm_medium_custom')}>
-                        <SelectTrigger id="utm_medium_preset">
+                     <Select
+                        onValueChange={(value) => {
+                            field.onChange(value); // Update preset field state in RHF
+                            setValue('utm_medium_custom', value); // Set custom field value
+                        }}
+                        value={field.value}
+                        >
+                        <SelectTrigger id="utm_medium_preset" className="rounded-md shadow-sm">
                           <SelectValue placeholder="Выберите канал" />
                         </SelectTrigger>
                         <SelectContent>
+                           <SelectItem value="">-- Не выбрано --</SelectItem>
                           {predefinedMediums.map((medium) => (
                             <SelectItem key={medium.value} value={medium.value}>
-                              {medium.label}
+                              {medium.label} ({medium.value})
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -241,6 +263,7 @@ export default function GeneratorPage() {
                       id="utm_campaign_name"
                       placeholder="Название кампании"
                       {...field}
+                      className="rounded-md shadow-sm"
                     />
                   )}
                 />
@@ -256,7 +279,7 @@ export default function GeneratorPage() {
                           <Button
                             variant={'outline'}
                             className={cn(
-                              'w-full justify-start text-left font-normal',
+                              'w-full justify-start text-left font-normal rounded-md shadow-sm',
                               !field.value && 'text-muted-foreground'
                             )}
                           >
@@ -264,7 +287,7 @@ export default function GeneratorPage() {
                             {field.value ? format(field.value, 'LLLL yyyy', { locale: ru }) : <span>Выберите дату</span>}
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
+                        <PopoverContent className="w-auto p-0 rounded-md shadow-lg">
                            <Calendar
                               mode="single"
                               selected={field.value}
@@ -274,6 +297,12 @@ export default function GeneratorPage() {
                               fromYear={2020}
                               toYear={new Date().getFullYear() + 5}
                               initialFocus
+                              classNames={{
+                                  caption_dropdowns: "flex justify-center gap-2", // Ensure dropdowns are visible
+                                  dropdown_month: "rdp-dropdown_month",
+                                  dropdown_year: "rdp-dropdown_year",
+                                  dropdown: "rounded border p-1 bg-background shadow", // Style dropdowns
+                                }}
                             />
                         </PopoverContent>
                       </Popover>
@@ -289,7 +318,7 @@ export default function GeneratorPage() {
                   name="utm_term"
                   control={control}
                   render={({ field }) => (
-                    <Input id="utm_term" placeholder="Например: buy+book" {...field} />
+                    <Input id="utm_term" placeholder="Например: buy+book" {...field} className="rounded-md shadow-sm" />
                   )}
                 />
             </div>
@@ -300,24 +329,24 @@ export default function GeneratorPage() {
                   name="utm_content"
                   control={control}
                   render={({ field }) => (
-                   <Input id="utm_content" placeholder="Например: banner_728x90" {...field} />
+                   <Input id="utm_content" placeholder="Например: banner_728x90" {...field} className="rounded-md shadow-sm"/>
                   )}
                 />
             </div>
 
-            <Button type="submit" className="w-full md:w-auto">Сгенерировать</Button>
+            <Button type="submit" className="w-full md:w-auto rounded-md shadow-md hover:shadow-lg transition-shadow">Сгенерировать</Button>
           </form>
         </CardContent>
       </Card>
 
       {generatedUrl && (
-        <Card className="shadow-md">
+        <Card className="shadow-md rounded-lg">
           <CardHeader>
-            <CardTitle>Сгенерированная ссылка</CardTitle>
+            <CardTitle className="text-xl font-semibold">Сгенерированная ссылка</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col md:flex-row items-start md:items-center gap-4 break-all">
-             <p className="flex-1 text-secondary">{generatedUrl}</p>
-             <Button variant="outline" size="sm" onClick={copyToClipboard}>
+          <CardContent className="flex flex-col md:flex-row items-start md:items-center gap-4 break-all p-6">
+             <p className="flex-1 text-secondary bg-muted p-3 rounded-md shadow-inner">{generatedUrl}</p>
+             <Button variant="outline" size="sm" onClick={copyToClipboard} className="rounded-md shadow-sm hover:shadow transition-shadow">
                 <Copy className="mr-2 h-4 w-4" />
                 Копировать
              </Button>
