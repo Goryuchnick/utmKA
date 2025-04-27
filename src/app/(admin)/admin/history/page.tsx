@@ -2,7 +2,7 @@
 'use client';
 
 import * as React from 'react';
-import { Copy, Trash2, List, LayoutGrid } from 'lucide-react'; // Added List and LayoutGrid icons
+import { Copy, Trash2, List, LayoutGrid, ArrowDownZA, ArrowUpAZ } from 'lucide-react'; // Added sorting icons
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
@@ -25,15 +25,18 @@ import { cn } from '@/lib/utils'; // Import cn utility
 
 const HISTORY_STORAGE_KEY = 'utmka_history';
 const VIEW_MODE_STORAGE_KEY = 'utmka_history_view_mode';
+const SORT_ORDER_STORAGE_KEY = 'utmka_history_sort_order'; // Key for sorting
 
 type ViewMode = 'list' | 'grid';
+type SortOrder = 'newest' | 'oldest'; // Define sort order types
 
 export default function AdminHistoryPage() {
   const { toast } = useToast();
   const [history, setHistory] = React.useState<HistoryItem[]>([]);
   const [viewMode, setViewMode] = React.useState<ViewMode>('list'); // Default to list view
+  const [sortOrder, setSortOrder] = React.useState<SortOrder>('newest'); // Default to newest first
 
-  // Load history and view mode from localStorage on mount
+  // Load history, view mode, and sort order from localStorage on mount
   React.useEffect(() => {
     try {
       const storedHistoryString = localStorage.getItem(HISTORY_STORAGE_KEY);
@@ -41,7 +44,8 @@ export default function AdminHistoryPage() {
         const parsedHistory: HistoryItem[] = JSON.parse(storedHistoryString);
         setHistory(parsedHistory.map(item => ({
           ...item,
-          date: new Date(item.date)
+          // Ensure date is a Date object, parsing if necessary
+          date: typeof item.date === 'string' ? new Date(item.date) : item.date
         })));
       }
 
@@ -49,6 +53,12 @@ export default function AdminHistoryPage() {
       if (storedViewMode && (storedViewMode === 'list' || storedViewMode === 'grid')) {
         setViewMode(storedViewMode);
       }
+
+      const storedSortOrder = localStorage.getItem(SORT_ORDER_STORAGE_KEY) as SortOrder | null;
+      if (storedSortOrder && (storedSortOrder === 'newest' || storedSortOrder === 'oldest')) {
+          setSortOrder(storedSortOrder);
+      }
+
     } catch (error) {
       console.error("Error loading data from localStorage:", error);
       toast({
@@ -58,6 +68,30 @@ export default function AdminHistoryPage() {
       });
     }
   }, [toast]);
+
+   // Function to handle setting and saving sort order
+   const handleSetSortOrder = (order: SortOrder) => {
+       setSortOrder(order);
+       try {
+           localStorage.setItem(SORT_ORDER_STORAGE_KEY, order);
+       } catch (error) {
+           console.error("Error saving sort order to localStorage:", error);
+       }
+   };
+
+   // Sort history based on the current sortOrder state
+   const sortedHistory = React.useMemo(() => {
+       return [...history].sort((a, b) => {
+           const dateA = typeof a.date === 'string' ? new Date(a.date).getTime() : a.date.getTime();
+           const dateB = typeof b.date === 'string' ? new Date(b.date).getTime() : b.date.getTime();
+           if (sortOrder === 'newest') {
+               return dateB - dateA; // Newest first
+           } else {
+               return dateA - dateB; // Oldest first
+           }
+       });
+   }, [history, sortOrder]);
+
 
   const handleSetViewMode = (mode: ViewMode) => {
     setViewMode(mode);
@@ -81,7 +115,8 @@ export default function AdminHistoryPage() {
           const updatedHistory = history.filter(item => item.id !== id);
           localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updatedHistory.map(item => ({
               ...item,
-              date: typeof item.date === 'string' ? new Date(item.date).toISOString() : item.date.toISOString()
+              // Ensure date is stored as ISO string consistently
+              date: item.date instanceof Date ? item.date.toISOString() : new Date(item.date).toISOString()
           }))));
           setHistory(updatedHistory);
           toast({
@@ -105,7 +140,7 @@ export default function AdminHistoryPage() {
             <p className="text-secondary mb-2">{item.url}</p>
             <div className="flex items-center gap-2 flex-wrap">
                 <span className="date-display rounded-md">
-                    {format(typeof item.date === 'string' ? new Date(item.date) : item.date, 'dd MMMM yyyy', { locale: ru })}
+                     {format(item.date instanceof Date ? item.date : new Date(item.date), 'dd MMMM yyyy HH:mm', { locale: ru })} {/* Show time */}
                 </span>
                 <Button
                     variant="outline"
@@ -149,8 +184,27 @@ export default function AdminHistoryPage() {
 
   return (
       <div className="space-y-4">
-          {/* View Mode Switcher */}
-          <div className="flex justify-end gap-2 mb-4">
+           {/* Controls: View Mode Switcher & Sorter */}
+          <div className="flex flex-wrap justify-end gap-2 mb-4">
+               {/* Sorter */}
+                <Button
+                   variant={sortOrder === 'newest' ? 'secondary' : 'outline'}
+                   onClick={() => handleSetSortOrder('newest')}
+                   className="h-8 rounded-md shadow-sm hover:shadow"
+                   aria-label="Сортировать: Сначала новые"
+               >
+                   <ArrowDownZA className="h-4 w-4 mr-1" /> Новые
+               </Button>
+               <Button
+                   variant={sortOrder === 'oldest' ? 'secondary' : 'outline'}
+                   onClick={() => handleSetSortOrder('oldest')}
+                   className="h-8 rounded-md shadow-sm hover:shadow"
+                   aria-label="Сортировать: Сначала старые"
+               >
+                   <ArrowUpAZ className="h-4 w-4 mr-1" /> Старые
+               </Button>
+
+               {/* View Mode Switcher */}
               <Button
                   variant={viewMode === 'list' ? 'secondary' : 'outline'}
                   size="icon"
@@ -177,7 +231,7 @@ export default function AdminHistoryPage() {
               viewMode === 'list' ? (
                   // List View
                   <div className="space-y-4">
-                      {history.map((item) => (
+                      {sortedHistory.map((item) => ( // Use sortedHistory
                           <Card key={item.id} className="shadow-sm rounded-lg bg-card">
                               <CardContent className="p-4">
                                   {renderHistoryItem(item)}
@@ -188,14 +242,15 @@ export default function AdminHistoryPage() {
               ) : (
                    // Grid View
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                       {history.map((item) => (
+                       {sortedHistory.map((item) => ( // Use sortedHistory
                            <Card key={item.id} className="shadow-sm rounded-lg bg-card flex flex-col"> {/* Ensure card is flex col for grid */}
                               <CardContent className="p-4 flex-grow"> {/* Use flex-grow */}
                                  {/* Slightly modified rendering for grid card content */}
                                  <p className="text-secondary mb-2 break-all">{item.url}</p>
                                  <div className="flex items-center gap-2 flex-wrap">
                                       <span className="date-display rounded-md">
-                                          {format(typeof item.date === 'string' ? new Date(item.date) : item.date, 'dd MMM yy', { locale: ru })} {/* Shorter date format */}
+                                          {/* Use date directly, ensure it's a Date object */}
+                                          {format(item.date instanceof Date ? item.date : new Date(item.date), 'dd MMM yy HH:mm', { locale: ru })} {/* Shorter date format with time */}
                                       </span>
                                   </div>
                               </CardContent>
