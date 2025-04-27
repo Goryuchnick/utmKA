@@ -35,14 +35,14 @@
     --chart-5: 27 87% 67%;
     --radius: 15px; /* Increased border radius */
 
-    /* Sidebar specific colors based on Metrika theme */
-    --sidebar-background: 215 20% 96.5%; /* #F0F3F7 */
-    --sidebar-foreground: 215 10% 30%;   /* Darker grey/blue text */
+    /* Sidebar specific colors - Updated background */
+    --sidebar-background: 0 60% 97%; /* #FBF4F4 - Match main background */
+    --sidebar-foreground: 0 10% 30%;   /* Darker grey/brown text */
     --sidebar-primary: 0 32% 47%;       /* Match app primary for indicator */
     --sidebar-primary-foreground: 0 0% 100%; /* Match app primary foreground */
-    --sidebar-accent: 216 18% 90%;       /* #E1E5EA - Selected item background */
-    --sidebar-accent-foreground: 215 10% 30%; /* Match sidebar foreground */
-    --sidebar-border: 210 10% 90%;       /* #E0E3E6 - Subtle separator border */
+    --sidebar-accent: 0 32% 90%;       /* Lighter shade of primary for selected item background */
+    --sidebar-accent-foreground: 0 32% 30%; /* Darker accent foreground */
+    --sidebar-border: 0 32% 85%;       /* Subtle separator border - lighter shade of primary */
     --sidebar-ring: 0 32% 47%;           /* Match app primary for focus rings */
   }
 
@@ -73,13 +73,13 @@
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
     /* Dark Sidebar specific colors */
-    --sidebar-background: 215 10% 15%; /* Darker grey/blue */
-    --sidebar-foreground: 215 10% 85%;   /* Lighter text */
+    --sidebar-background: 0 10% 10%; /* Match dark background */
+    --sidebar-foreground: 0 0% 85%;   /* Lighter text */
     --sidebar-primary: 0 32% 57%;       /* Match dark primary */
     --sidebar-primary-foreground: 0 10% 10%; /* Match dark primary foreground */
-    --sidebar-accent: 216 10% 25%;       /* Darker selected item background */
-    --sidebar-accent-foreground: 215 10% 85%; /* Match dark sidebar foreground */
-    --sidebar-border: 210 10% 20%;       /* Darker separator border */
+    --sidebar-accent: 0 10% 25%;       /* Darker selected item background */
+    --sidebar-accent-foreground: 0 0% 95%; /* Match dark accent foreground */
+    --sidebar-border: 0 10% 20%;       /* Darker separator border */
     --sidebar-ring: 0 32% 57%;           /* Match dark ring */
   }
 }
@@ -119,4 +119,3 @@
     background: transparent;
     cursor: default; /* Non-clickable */
 }
-    
