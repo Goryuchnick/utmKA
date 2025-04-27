@@ -230,11 +230,8 @@ export default function GeneratorPage() {
         };
 
         // Add new item and save back to localStorage, ensuring date is valid before stringifying
-        const updatedHistory = [newHistoryItem, ...currentHistoryDates];
-        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updatedHistory.map(item => ({
-            ...item,
-            date: item.date instanceof Date && !isNaN(item.date.getTime()) ? item.date.toISOString() : new Date().toISOString() // Fallback to now if date is invalid
-        }))));
+        const updatedHistory = [newHistoryItem, ...currentHistoryDates]; // Add to the beginning
+        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updatedHistory.map(item => ({ ...item, date: item.date.toISOString() })))); // Save dates as ISO strings
 
         // If authenticated, you might also sync this with a backend database here
         // if (isAuthenticated) {
@@ -349,14 +346,16 @@ export default function GeneratorPage() {
         children,
         tooltipContent,
         fieldValue, // Pass the field value to determine placeholder state
+        buttonWidthClass = '!w-[170px]', // Default width, allow override
         ...props
-    }: React.ComponentProps<typeof SelectTrigger> & { disabled: boolean; tooltipContent: string; fieldValue?: string | null }) => {
+    }: React.ComponentProps<typeof SelectTrigger> & { disabled: boolean; tooltipContent: string; fieldValue?: string | null; buttonWidthClass?: string; }) => {
         const trigger = (
             <SelectTrigger
                 disabled={disabled}
                 {...props}
                 className={cn(
-                    "!h-10 !w-[170px] !border-none !border-l !border-input !shadow-none !ring-0 focus:!ring-0 rounded-none bg-muted px-3",
+                    "!h-10 !border-none !border-l !border-input !shadow-none !ring-0 focus:!ring-0 rounded-none bg-muted px-3",
+                    buttonWidthClass, // Apply width class
                      // Use text-secondary for placeholder, primary for value
                     (!fieldValue || fieldValue === '__placeholder__') ? 'text-secondary' : 'text-primary font-medium',
                     disabled && 'cursor-not-allowed opacity-50'
@@ -385,7 +384,7 @@ export default function GeneratorPage() {
     <TooltipProvider> {/* Wrap with TooltipProvider */}
         <div className="space-y-8">
         {/* Card for Form Inputs */}
-        <Card className="bg-card shadow-lg rounded-lg"> {/* Use bg-card and rounded-lg */}
+        <Card className="bg-card shadow-lg rounded-lg overflow-hidden"> {/* Use bg-card and rounded-lg */}
             <CardContent className="p-6">
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
 
@@ -680,7 +679,7 @@ export default function GeneratorPage() {
 
         {/* Card for Generated URL Output (conditionally rendered) */}
         {generatedUrl && (
-            <Card className="bg-card shadow-lg rounded-lg"> {/* Use bg-card and rounded-lg */}
+            <Card className="bg-card shadow-lg rounded-lg overflow-hidden"> {/* Use bg-card and rounded-lg */}
             <CardHeader>
                 <CardTitle className="text-xl font-semibold text-primary">Сгенерированная ссылка</CardTitle>
             </CardHeader>
@@ -697,8 +696,8 @@ export default function GeneratorPage() {
 
         {/* Conditional Login Prompt */}
             {!isLoading && !isAuthenticated && (
-                <p className="text-sm text-secondary text-center mt-4"> {/* Changed text-muted-foreground to text-secondary */}
-                    Чтобы смотреть историю создания размеченных ссылок,{' '}
+                 <p className="text-sm text-secondary text-center mt-4"> {/* Changed text-muted-foreground to text-secondary */}
+                    Чтобы смотреть историю создания размеченных ссылок и использовать шаблоны, {' '}
                     <Link href="/login" className="font-bold text-primary hover:underline">
                         войдите в аккаунт →
                     </Link>
